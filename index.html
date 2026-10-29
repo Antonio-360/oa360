@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OA 360 · Office Automation</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<style>
+:root{
+  --navy:#16263D;--navy2:#1F3350;--blue:#1B5E96;--teal:#3AAFC9;
+  --c:#00AEEF;--m:#EC008C;--y:#FFD400;--k:#1A1A1A;
+  --bg:#F3F6F9;--surface:#FFFFFF;--line:#DDE3EA;--ink:#16263D;--muted:#5B6B7F;--soft:#EEF2F6;
+  --ok:#0F8A5F;--warn:#C98A00;--bad:#D0254F;
+  color-scheme:light;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1826;--surface:#16233A;--line:#26364F;--ink:#E7EDF5;--muted:#9AA9BC;--soft:#1C2B45;--navy:#0A1320;--navy2:#14213A;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0E1826;--surface:#16233A;--line:#26364F;--ink:#E7EDF5;--muted:#9AA9BC;--soft:#1C2B45;--navy:#0A1320;--navy2:#14213A;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1.45 Archivo,"Helvetica Neue",Arial,sans-serif;font-variant-numeric:tabular-nums}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--navy)}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--blue)}
+.app{display:grid;grid-template-columns:232px 1fr;height:100%}
+aside{background:var(--navy);color:#fff;display:flex;flex-direction:column;padding:18px 12px;gap:4px;overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px}
+.iso{display:grid;grid-template-columns:9px 9px;gap:2px}.iso i{width:9px;height:9px;display:block}
+.brand b{font-weight:800;letter-spacing:.01em;font-size:15px;line-height:1.1}.brand small{display:block;color:#8FA3BD;font-size:11.5px;font-weight:500}
+nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;color:#C9D3DF;text-decoration:none;font-weight:500;font-size:14.5px}
+nav a:hover{background:var(--navy2);color:#fff}
+nav a.on{background:var(--blue);color:#fff}
+nav a .n{margin-left:auto;background:var(--m);color:#fff;font-size:11.5px;font-weight:700;border-radius:20px;padding:0 7px}
+nav .grp{color:#6F86A3;font-size:12px;font-weight:600;padding:14px 10px 4px}
+.who{margin-top:auto;padding:12px 10px;border-top:1px solid #2A3E5C;font-size:13px;color:#C9D3DF}
+.who b{color:#fff;display:block}
+main{overflow:auto;padding:26px 30px 90px}
+.top{display:flex;align-items:flex-end;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.top h1{margin:0;font-size:27px;line-height:1.15;font-weight:800;letter-spacing:-.01em}
+.top p{margin:3px 0 0;color:var(--muted)}
+.top .act{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;font-size:14px;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--blue)}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.wa{background:#1FA855;border-color:#1FA855;color:#fff}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.panel h2{margin:0 0 12px;font-size:16.5px;font-weight:700}
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:2fr 1fr}.g11{grid-template-columns:1fr 1fr}
+/* KPI: ink-level gauges — signature element */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.kpi{padding:16px 18px 14px;border-right:1px solid var(--line);position:relative}
+.kpi:last-child{border-right:0}
+.kpi .v{font-size:30px;font-weight:800;line-height:1.05;letter-spacing:-.02em}
+.kpi .l{color:var(--muted);font-size:13.5px;margin-top:2px}
+.kpi .ink{position:absolute;left:0;top:0;bottom:0;width:4px}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;color:var(--muted);font-weight:600;font-size:12.5px;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl tr.click{cursor:pointer}.tbl tr.click:hover td{background:var(--soft)}
+.wrap{overflow-x:auto}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--soft);white-space:nowrap}
+.chip.ok{background:#DDF3EA;color:#0B6B49}.chip.warn{background:#FFF3C4;color:#7A5600}.chip.bad{background:#FCE0E8;color:#A3163A}.chip.blue{background:#DCEAF6;color:#164C7B}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .chip.ok{background:#123F31;color:#7FE0B8}:root:not([data-theme="light"]) .chip.warn{background:#4A3B07;color:#FFD966}:root:not([data-theme="light"]) .chip.bad{background:#4C1324;color:#FF9BB5}:root:not([data-theme="light"]) .chip.blue{background:#163555;color:#9CCBF2}}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.muted{color:var(--muted)}.sm{font-size:13px}.b{font-weight:700}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+input.f,select.f,textarea.f{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 11px;min-width:0}
+textarea.f{width:100%;min-height:70px;resize:vertical}
+label.fl{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:600}
+label.fl .f{color:var(--ink);font-weight:400;font-size:14.5px}
+.form{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.form .full{grid-column:1/-1}
+/* kanban */
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:12px;overflow-x:auto;padding-bottom:6px}
+.col{background:var(--soft);border-radius:12px;padding:10px;min-height:120px}
+.col h3{margin:2px 4px 10px;font-size:13.5px;font-weight:700;display:flex;gap:6px;align-items:center}
+.col h3 span{margin-left:auto;color:var(--muted);font-weight:600}
+.col.drop{outline:2px dashed var(--teal)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 11px;margin-bottom:8px;cursor:pointer;font-size:13.5px}
+.card:hover{border-color:var(--blue)}
+.card .t{font-weight:700;font-size:14px}
+.card .sla{height:3px;border-radius:3px;margin:-10px -11px 8px}
+/* drawer */
+.ov{position:fixed;inset:0;background:rgba(10,19,32,.45);z-index:20;display:flex;justify-content:flex-end}
+.dr{width:min(760px,100%);height:100%;background:var(--bg);overflow:auto;padding:22px 24px 60px;padding-top:calc(22px + env(safe-area-inset-top,0px))}
+.dr .x{float:right}
+.dr h2{margin:0 0 2px;font-size:22px;font-weight:800}.dr .panel h2{font-size:16.5px;margin:0 0 12px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:16px 0;overflow-x:auto}
+.tabs button{border:0;background:none;padding:9px 12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button.on{color:var(--ink);border-color:var(--blue)}
+.chk{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chk label{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-weight:500;cursor:pointer}
+.chk input{width:20px;height:20px;accent-color:var(--blue)}
+canvas.sig{width:100%;height:170px;background:#fff;border:1px dashed var(--muted);border-radius:10px;touch-action:none}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 18px;border-radius:10px;z-index:40;font-weight:600;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.bars{display:flex;align-items:flex-end;gap:8px;height:190px;padding-top:10px}
+.bars .bw{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.bars .st{width:100%;max-width:34px;display:flex;flex-direction:column-reverse;border-radius:5px 5px 0 0;overflow:hidden}
+.bars small{font-size:11.5px;color:var(--muted)}
+.tcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+.tcard .t{font-size:17px;font-weight:800}
+.big{padding:13px 16px;font-size:15.5px;border-radius:11px;flex:1;justify-content:center}
+.mnav{display:none}
+.hide{display:none!important}
+.gate{max-width:520px;margin:12vh auto;text-align:center}
+.gate code{background:var(--soft);padding:3px 8px;border-radius:6px;font-size:13px;word-break:break-all}
+@media (max-width:1100px){.g4,.kpis{grid-template-columns:repeat(2,1fr)}.kpi:nth-child(2){border-right:0}.kpi:nth-child(-n+2){border-bottom:1px solid var(--line)}.g2,.g3{grid-template-columns:1fr}}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}aside{display:none}
+  main{padding:16px 14px 96px}
+  .top h1{font-size:23px}
+  .form,.g11,.chk{grid-template-columns:1fr}
+  .mnav{display:flex;position:fixed;left:0;right:0;bottom:0;background:var(--navy);z-index:15;padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
+  .mnav a{flex:1;text-align:center;color:#C9D3DF;text-decoration:none;font-size:11.5px;font-weight:600;padding:6px 2px;border-radius:8px}
+  .mnav a.on{background:var(--blue);color:#fff}
+  .mnav svg{display:block;margin:0 auto 2px}
+}
+@media (prefers-reduced-motion:no-preference){.dr{animation:sl .22s ease-out}@keyframes sl{from{transform:translateX(40px);opacity:.4}}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside>
+    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation</small></div></div>
+    <nav id="nav"></nav>
+    <div class="who" id="who">Conectando…</div>
+  </aside>
+  <main id="main"><div class="empty">Cargando OA 360…</div></main>
+</div>
+<div class="mnav" id="mnav"></div>
+<div id="layer"></div>
+<script>
+"use strict";
+/* ===================== utilidades ===================== */
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=n=>(Number(n)||0).toLocaleString("es-MX");
+const money=n=>"$"+(Number(n)||0).toLocaleString("es-MX",{minimumFractionDigits:0,maximumFractionDigits:0});
+const MESES=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const mlabel=k=>{const [y,m]=k.split("-");return MESES[+m-1]+" "+y.slice(2)};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const TZ=-6*3600e3; // CDMX sin horario de verano
+const cdmx=t=>new Date((t??Date.now())+TZ); // usar getUTC*
+const fdt=t=>{if(!t)return"—";const d=cdmx(t);return d.getUTCDate()+" "+MESES[d.getUTCMonth()]+" "+String(d.getUTCHours()).padStart(2,"0")+":"+String(d.getUTCMinutes()).padStart(2,"0")};
+const fd=t=>{if(!t)return"—";const d=cdmx(t);return d.getUTCDate()+" "+MESES[d.getUTCMonth()]+" "+d.getUTCFullYear()};
+function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2600)}
+const ICON={
+ inicio:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+ servicio:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+ midia:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/>',
+ clientes:'<path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M8 7h4M8 11h4M8 15h4"/>',
+ equipos:'<path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2"/><rect x="6" y="14" width="12" height="7"/>',
+ preventivos:'<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/>',
+ toner:'<path d="M7 3h10v4l2 3v11H5V10l2-3z"/><path d="M5 13h14"/>',
+ comercial:'<path d="M3 4h18l-7 9v6l-4 2v-8z"/>',
+ mensajes:'<path d="M4 5h16v11H8l-4 4z"/>',
+ config:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'
+};
+const svg=n=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]||""}</svg>`;
+
+/* ===================== estado ===================== */
+const S={clientes:new Map(),equipos:new Map(),tickets:new Map(),opps:new Map(),sol:new Map(),inv:new Map(),
+  usuarios:{},toner:[],contadores:{},me:null,rol:null,owner:false,canWrite:true,ready:{},filters:{}};
+let db=null;
+const ROLES={admin:"Administración",direccion:"Dirección",comercial:"Comercial",atencion:"Atención a clientes",jefe_tecnico:"Jefe técnico",tecnico:"Técnico"};
+const ESTADOS=[["abierto","Abierto"],["asignado","Asignado"],["en_camino","En camino"],["en_sitio","En sitio"],["refaccion","Esperando refacción"],["cerrado","Cerrado"]];
+const TIPOS=["Correctivo","Preventivo","Instalación","Retiro","Entrega de tóner","Cambio de equipo"];
+const ETAPAS=[["nuevo","Nuevo"],["contactado","Contactado"],["diagnostico","Diagnóstico / visita"],["propuesta","Propuesta enviada"],["negociacion","Negociación"],["ganado","Ganado"],["perdido","Perdido"]];
+const CHECK=["Página de estado","Alimentador","Cristales","Gomas","Fusor","Limpieza de chasis","Bote residual (vaciar)","Limpieza general de tapas"];
+const FINAL=["Cerrado","Refacciones","Software","Capacitación","Cambio de equipo","Abierto"];
+const EMPRESA={nombre:"OFFICE AUTOMATION S.A. DE C.V.",dir:"Av. de los Reyes 12, MZ 018, Residencial El Dorado, 54020 Tlalnepantla de Baz, Edo. de México",wa:"5627606710",web:"www.officeautomation.com.mx",correo:"servicio@officeautomation.com.mx"};
+const PLANTILLAS=[
+ {id:"recibido",n:"Ticket recibido",t:"Hola {contacto}, recibimos su reporte del equipo {modelo} (serie {serie}) en {cliente}. Folio {folio}. Compromiso de atención: {compromiso}. Office Automation."},
+ {id:"camino",n:"Técnico en camino",t:"Hola {contacto}, {tecnico} va en camino a {cliente} para atender el folio {folio}. Office Automation."},
+ {id:"cerrado",n:"Servicio cerrado + encuesta",t:"Hola {contacto}, cerramos el servicio {folio} de su equipo {modelo}. ¿Cómo calificaría la atención: excelente, buena, regular o mala? Su respuesta nos ayuda a mejorar. Office Automation."},
+ {id:"toner",n:"Tóner enviado",t:"Hola {contacto}, le enviamos el tóner solicitado para {cliente} (vale {folio}). Cualquier duda, por aquí. Office Automation."},
+ {id:"contador",n:"Recordatorio de lectura de contador",t:"Hola {contacto}, para la factura de este mes, ¿nos comparte la lectura de contador de sus equipos? Puede ser foto de la hoja de contador. Gracias. Office Automation."},
+ {id:"renovacion",n:"Aviso de renovación (90 días)",t:"Hola {contacto}, su contrato con Office Automation termina pronto. Nos gustaría revisar con usted la renovación y, si conviene, actualizar sus equipos. ¿Agendamos una llamada?"}
+];
+const canW=()=>S.canWrite!==false;
+const can=a=>{const r=S.rol;if(S.owner||r==="admin")return true;
+  const M={servicio:["direccion","atencion","jefe_tecnico","comercial"],asignar:["jefe_tecnico","atencion","direccion"],comercial:["comercial","direccion","atencion"],toner:["jefe_tecnico","atencion","direccion"],config:[],clientes:["direccion","comercial","atencion","jefe_tecnico"],equipos:["direccion","comercial","atencion","jefe_tecnico"]};
+  return (M[a]||[]).includes(r)};
+
+/* ===================== datos derivados ===================== */
+const mesesTodos=()=>{const s=new Set();S.equipos.forEach(e=>Object.keys(e.lect||{}).forEach(m=>s.add(m)));return [...s].sort().slice(-12)};
+const totalMes=(e,m)=>{const v=(e.lect||{})[m];return v?(v.bn||0)+(v.color||0):0};
+function slaInfo(t){
+  if(t.estado==="cerrado"){const ok=t.fin&&t.compromiso&&t.fin<=t.compromiso;return{k:ok?"ok":"bad",txt:ok?"Cumplido":"Fuera de SLA",col:ok?"var(--ok)":"var(--bad)"}}
+  if(!t.compromiso)return{k:"",txt:"Sin compromiso",col:"var(--line)"};
+  const d=t.compromiso-Date.now();
+  if(d<0)return{k:"bad",txt:"Vencido",col:"var(--bad)"};
+  if(d<2*3600e3)return{k:"warn",txt:"Por vencer",col:"var(--warn)"};
+  return{k:"ok",txt:"A tiempo",col:"var(--ok)"};
+}
+function compromiso(t){ // regla Bernardo: antes de 13:00 => mismo día 18:00; después => siguiente día hábil 12:00
+  const d=cdmx(t);let y=d.getUTCFullYear(),mo=d.getUTCMonth(),da=d.getUTCDate(),h=d.getUTCHours(),dow=d.getUTCDay();
+  const mk=(y,mo,da,hh)=>Date.UTC(y,mo,da,hh)-TZ;
+  const habil=dow>=1&&dow<=5;
+  if(habil&&h<13)return mk(y,mo,da,18);
+  let x=new Date(Date.UTC(y,mo,da));do{x=new Date(x.getTime()+864e5)}while(x.getUTCDay()===0||x.getUTCDay()===6);
+  return mk(x.getUTCFullYear(),x.getUTCMonth(),x.getUTCDate(),12);
+}
+function prevDue(e){
+  if(e.estatus!=="instalado")return null;
+  const meses={mensual:1,bimestral:2,trimestral:3}[e.frec||"trimestral"];
+  if(!e.ultPrev)return{due:true,txt:"Sin registro"};
+  const next=new Date(e.ultPrev);next.setMonth(next.getMonth()+meses);
+  return{due:next.getTime()<=Date.now()+15*864e5,txt:"Toca "+fd(next.getTime()),next:next.getTime()};
+}
+const misTickets=()=>[...S.tickets.values()].filter(t=>t.tecnicoId===S.me?.id&&t.estado!=="cerrado");
+const tecnicos=()=>Object.entries(S.usuarios).filter(([,u])=>u.rol==="tecnico"||u.rol==="jefe_tecnico").map(([id,u])=>({id,...u}));
+const nombreDe=id=>S.usuarios[id]?.alias||"Sin asignar";
+
+/* ===================== navegación ===================== */
+const VIEWS=[
+ {id:"inicio",n:"Inicio",ok:()=>true},
+ {id:"midia",n:"Mi día",ok:()=>S.rol==="tecnico"||S.rol==="jefe_tecnico"},
+ {id:"servicio",n:"Servicio técnico",ok:()=>can("servicio")},
+ {id:"preventivos",n:"Preventivos",ok:()=>can("asignar")||S.rol==="jefe_tecnico"},
+ {id:"clientes",n:"Clientes",ok:()=>can("clientes")},
+ {id:"equipos",n:"Equipos",ok:()=>can("equipos")||S.rol==="tecnico"},
+ {id:"toner",n:"Tóner",ok:()=>can("toner")},
+ {id:"comercial",n:"Comercial",ok:()=>can("comercial")},
+ {id:"mensajes",n:"Mensajes",ok:()=>can("servicio")},
+ {id:"config",n:"Equipo y accesos",ok:()=>S.owner||S.rol==="admin"}
+];
+const cur=()=>{const h=(location.hash||"").slice(1);return VIEWS.find(v=>v.id===h&&v.ok())?h:(S.rol==="tecnico"?"midia":"inicio")};
+function renderNav(){
+  const vs=VIEWS.filter(v=>v.ok());const c=cur();
+  const abiertos=[...S.tickets.values()].filter(t=>t.estado!=="cerrado").length;
+  const mine=misTickets().length;
+  $("#nav").innerHTML=vs.map(v=>`<a href="#${v.id}" class="${v.id===c?"on":""}">${svg(v.id)}${v.n}${v.id==="servicio"&&abiertos?`<span class="n">${abiertos}</span>`:""}${v.id==="midia"&&mine?`<span class="n">${mine}</span>`:""}</a>`).join("");
+  const mob=S.rol==="tecnico"?["midia","equipos"]:["inicio","servicio","clientes","toner","comercial"];
+  $("#mnav").innerHTML=vs.filter(v=>mob.includes(v.id)).map(v=>`<a href="#${v.id}" class="${v.id===c?"on":""}">${svg(v.id)}${v.n.split(" ")[0]}</a>`).join("");
+}
+function render(){
+  if(!S.gateOk){return}
+  renderNav();
+  const c=cur();const fn={inicio:vInicio,midia:vMiDia,servicio:vServicio,preventivos:vPrev,clientes:vClientes,equipos:vEquipos,toner:vToner,comercial:vComercial,mensajes:vMensajes,config:vConfig}[c];
+  const m=$("#main");const st=m.scrollTop;m.innerHTML=fn();m.scrollTop=st;bindView(c);
+}
+window.addEventListener("hashchange",()=>{$("#main").scrollTop=0;render()});
+let rT=null;const later=()=>{clearTimeout(rT);rT=setTimeout(()=>{if(!document.activeElement||!document.activeElement.matches("input.f,textarea.f,select.f")||!$("#main").contains(document.activeElement))render();else later()},150)};
+
+/* ===================== vistas ===================== */
+function header(t,p,acts=""){return `<div class="top"><div><h1>${t}</h1>${p?`<p>${p}</p>`:""}</div><div class="act">${acts}</div></div>`}
+function vInicio(){
+  const ms=mesesTodos();const last=ms[ms.length-1];
+  const inst=[...S.equipos.values()].filter(e=>e.estatus==="instalado");
+  const cliAct=new Set(inst.map(e=>e.clienteId)).size;
+  let bn=0,co=0;inst.forEach(e=>{const v=(e.lect||{})[last];if(v){bn+=v.bn||0;co+=v.color||0}});
+  const T=[...S.tickets.values()];const ab=T.filter(t=>t.estado!=="cerrado");const venc=ab.filter(t=>slaInfo(t).k==="bad").length;
+  const mesIni=(()=>{const d=cdmx();return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1)-TZ})();
+  const cerr=T.filter(t=>t.estado==="cerrado"&&t.fin>=mesIni);const cump=cerr.length?Math.round(100*cerr.filter(t=>slaInfo(t).k==="ok").length/cerr.length):null;
+  // barras
+  const tots=ms.map(m=>{let b=0,c=0;S.equipos.forEach(e=>{const v=(e.lect||{})[m];if(v){b+=v.bn||0;c+=v.color||0}});return{m,b,c}});
+  const mx=Math.max(1,...tots.map(x=>x.b+x.c));
+  const bars=tots.map(x=>`<div class="bw" title="${mlabel(x.m)}: ${fmt(x.b)} B/N · ${fmt(x.c)} color"><div class="st" style="height:${Math.round(100*(x.b+x.c)/mx)}%"><div style="flex:${x.b};background:var(--navy2);min-height:1px"></div><div style="flex:${x.c};background:var(--m);min-height:1px"></div></div><small>${mlabel(x.m)}</small></div>`).join("");
+  // top clientes
+  const pc=new Map();inst.forEach(e=>{pc.set(e.clienteId,(pc.get(e.clienteId)||0)+totalMes(e,last))});
+  const top=[...pc.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const tmax=Math.max(1,...top.map(x=>x[1]));
+  const prevs=inst.filter(e=>prevDue(e)?.due).length;
+  const opps=[...S.opps.values()].filter(o=>!["ganado","perdido"].includes(o.etapa));
+  const pipe=opps.reduce((s,o)=>s+(+o.valor||0),0);
+  return header("Buen día"+(S.me?.name?", "+esc(S.me.name.split(" ")[0]):""),`Consumo de ${mlabel(last||"2026-09")} y operación de hoy.`,
+   can("servicio")?`<button class="btn pri" data-a="nuevoTicket">+ Nuevo ticket</button>`:"")+
+  `<div class="kpis">
+    <div class="kpi"><i class="ink" style="background:var(--c)"></i><div class="v">${fmt(cliAct)}</div><div class="l">clientes con equipos instalados</div></div>
+    <div class="kpi"><i class="ink" style="background:var(--m)"></i><div class="v">${fmt(inst.length)}</div><div class="l">equipos instalados</div></div>
+    <div class="kpi"><i class="ink" style="background:var(--y)"></i><div class="v">${fmt(bn+co)}</div><div class="l">páginas en ${mlabel(last||"")} · ${fmt(co)} a color</div></div>
+    <div class="kpi"><i class="ink" style="background:var(--k)"></i><div class="v">${ab.length}<span style="font-size:17px;color:${venc?"var(--bad)":"var(--muted)"}"> · ${venc} vencidos</span></div><div class="l">tickets abiertos${cump!==null?` · SLA del mes ${cump}%`:""}</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="panel"><h2>Páginas impresas por mes</h2><div class="row sm muted"><span class="dot" style="background:var(--navy2)"></span>Blanco y negro <span class="dot" style="background:var(--m);margin-left:10px"></span>Color</div><div class="bars">${bars}</div></div>
+    <div class="panel"><h2>Hoy en la operación</h2>
+      <table class="tbl"><tr class="click" data-go="servicio"><td>Tickets abiertos</td><td class="b">${ab.length}</td></tr>
+      <tr class="click" data-go="servicio"><td>Fuera de compromiso</td><td class="b" style="color:${venc?"var(--bad)":"inherit"}">${venc}</td></tr>
+      <tr class="click" data-go="preventivos"><td>Preventivos por programar</td><td class="b">${prevs}</td></tr>
+      <tr class="click" data-go="toner"><td>Solicitudes de tóner pendientes</td><td class="b">${[...S.sol.values()].filter(s=>s.estado!=="entregado").length}</td></tr>
+      <tr class="click" data-go="comercial"><td>Oportunidades abiertas</td><td class="b">${opps.length} · ${money(pipe)}/mes</td></tr></table>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:16px"><h2>Clientes con más volumen en ${mlabel(last||"")}</h2>
+   <table class="tbl">${top.map(([id,v],i)=>{const c=S.clientes.get(id);return `<tr class="click" data-cli="${esc(id)}"><td style="width:28px" class="muted">${i+1}</td><td>${esc(c?.nombre||id)}</td><td style="width:40%"><div style="height:8px;border-radius:4px;background:var(--teal);width:${Math.max(3,Math.round(100*v/tmax))}%"></div></td><td class="b" style="text-align:right">${fmt(v)}</td></tr>`}).join("")||`<tr><td class="empty">Sin lecturas cargadas.</td></tr>`}</table></div>`;
+}
+function ticketCard(t){const s=slaInfo(t);return `<div class="card" draggable="${can("asignar")}" data-tk="${esc(t._id)}"><div class="sla" style="background:${s.col}"></div><div class="row" style="justify-content:space-between"><span class="t">${esc(t.folio)}</span><span class="chip ${s.k}">${s.txt}</span></div><div>${esc(t.cliente||"")}</div><div class="muted sm">${esc(t.tipo)} · ${esc(t.modelo||"")} ${t.serie?"· "+esc(t.serie):""}</div><div class="muted sm">${esc(nombreDe(t.tecnicoId))} · compromiso ${fdt(t.compromiso)}</div></div>`}
+function vServicio(){
+  const f=S.filters.serv||{};const modo=f.modo||"estado";
+  let T=[...S.tickets.values()];
+  if(f.q){const q=f.q.toLowerCase();T=T.filter(t=>(t.folio+" "+t.cliente+" "+t.serie+" "+t.desc).toLowerCase().includes(q))}
+  const hoy=Date.now()-7*864e5;T=T.filter(t=>t.estado!=="cerrado"||t.fin>hoy);
+  T.sort((a,b)=>(a.compromiso||9e15)-(b.compromiso||9e15));
+  let cols;
+  if(modo==="estado")cols=ESTADOS.map(([k,n])=>({k,n,items:T.filter(t=>t.estado===k)}));
+  else{const tec=tecnicos();cols=[{k:"",n:"Sin asignar",items:T.filter(t=>!t.tecnicoId&&t.estado!=="cerrado")},...tec.map(u=>({k:u.id,n:u.alias,items:T.filter(t=>t.tecnicoId===u.id&&t.estado!=="cerrado")}))]}
+  return header("Servicio técnico","Compromiso: reporte antes de las 13:00, técnico el mismo día; después, al día hábil siguiente a mediodía.",`<button class="btn pri" data-a="nuevoTicket">+ Nuevo ticket</button>`)+
+  `<div class="filters"><input class="f" placeholder="Buscar folio, cliente, serie…" data-f="serv.q" value="${esc(f.q||"")}" style="flex:1;min-width:200px">
+   <select class="f" data-f="serv.modo"><option value="estado" ${modo==="estado"?"selected":""}>Por estado</option><option value="tecnico" ${modo==="tecnico"?"selected":""}>Por técnico</option></select></div>
+   <div class="board" data-board="${modo}">${cols.map(c=>`<div class="col" data-col="${esc(c.k)}"><h3>${esc(c.n)}<span>${c.items.length}</span></h3>${c.items.map(ticketCard).join("")||`<div class="muted sm" style="padding:4px">—</div>`}</div>`).join("")}</div>
+   ${can("asignar")?`<p class="muted sm">Arrastra una tarjeta para cambiar su estado o asignarla a un técnico. En el celular, ábrela y usa los selectores.</p>`:""}`;
+}
+function vMiDia(){
+  const T=misTickets().sort((a,b)=>(a.compromiso||0)-(b.compromiso||0));
+  return header("Mi día",T.length?`${T.length} servicio${T.length>1?"s":""} asignado${T.length>1?"s":""}.`:"No tienes servicios pendientes.")+
+   T.map(t=>{const s=slaInfo(t);const e=S.equipos.get(t.equipoId);return `<div class="tcard"><div class="row" style="justify-content:space-between"><span class="t">${esc(t.cliente)}</span><span class="chip ${s.k}">${s.txt} · ${fdt(t.compromiso)}</span></div>
+   <div class="muted">${esc(t.tipo)} · ${esc(t.folio)}</div><div style="margin:6px 0">${esc(t.modelo||"")} ${t.serie?"· serie "+esc(t.serie):""}<br><span class="muted">${esc(t.ubicacion||e?.ubicacion||"")}</span></div>
+   <div class="sm">${esc(t.desc||"")}</div>
+   <div class="row" style="margin-top:12px">${t.estado==="asignado"||t.estado==="abierto"?`<button class="btn pri big" data-st="${esc(t._id)}" data-v="en_camino">Voy en camino</button>`:""}${t.estado==="en_camino"?`<button class="btn pri big" data-st="${esc(t._id)}" data-v="en_sitio">Llegué</button>`:""}<button class="btn big" data-tk="${esc(t._id)}">Abrir reporte</button></div></div>`}).join("")||`<div class="panel empty">Cuando Lalo te asigne un servicio aparecerá aquí.</div>`;
+}
+function vPrev(){
+  const f=S.filters.prev||{};
+  let E=[...S.equipos.values()].filter(e=>e.estatus==="instalado").map(e=>({e,p:prevDue(e)}));
+  if(f.frec)E=E.filter(x=>x.e.frec===f.frec);
+  if(!f.todos)E=E.filter(x=>x.p.due);
+  E.sort((a,b)=>(b.e.prom||0)-(a.e.prom||0));
+  const n={mensual:0,bimestral:0,trimestral:0};[...S.equipos.values()].filter(e=>e.estatus==="instalado").forEach(e=>n[e.frec||"trimestral"]++);
+  return header("Plan de preventivos","Frecuencia según volumen promedio de los últimos 3 meses: más de 15,000 págs. mensual; de 10,000 a 15,000 bimestral; menos, trimestral.")+
+  `<div class="kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px"><div class="kpi"><i class="ink" style="background:var(--m)"></i><div class="v">${n.mensual}</div><div class="l">equipos con preventivo mensual</div></div><div class="kpi"><i class="ink" style="background:var(--c)"></i><div class="v">${n.bimestral}</div><div class="l">bimestral</div></div><div class="kpi"><i class="ink" style="background:var(--y)"></i><div class="v">${n.trimestral}</div><div class="l">trimestral</div></div></div>
+  <div class="filters"><select class="f" data-f="prev.frec"><option value="">Todas las frecuencias</option>${["mensual","bimestral","trimestral"].map(x=>`<option ${f.frec===x?"selected":""}>${x}</option>`).join("")}</select>
+  <label class="row sm"><input type="checkbox" data-f="prev.todos" ${f.todos?"checked":""}> Ver también los que aún no tocan</label></div>
+  <div class="panel wrap"><table class="tbl"><tr><th>Cliente</th><th>Equipo</th><th>Ubicación</th><th>Prom./mes</th><th>Frecuencia</th><th>Estado</th><th></th></tr>
+  ${E.slice(0,300).map(({e,p})=>`<tr><td>${esc(e.cliente)}</td><td>${esc(e.modelo)}<div class="muted sm">${esc(e.serie)}</div></td><td class="sm">${esc(e.ubicacion)}</td><td>${fmt(e.prom)}</td><td>${esc(e.frec)}</td><td><span class="chip ${p.due?"warn":"ok"}">${esc(p.txt)}</span></td><td>${canW()?`<button class="btn sm" data-prev="${esc(e._id)}">Crear ticket</button>`:""}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">No hay preventivos pendientes con este filtro.</td></tr>`}</table>
+  ${E.length>300?`<p class="muted sm">Mostrando 300 de ${E.length}. Filtra por frecuencia para ver el resto.</p>`:""}</div>`;
+}
+function vClientes(){
+  const f=S.filters.cli||{};let C=[...S.clientes.values()];
+  if(f.q){const q=f.q.toLowerCase();C=C.filter(c=>(c.nombre+" "+(c.rfc||"")+" "+(c.municipio||"")).toLowerCase().includes(q))}
+  if(f.est)C=C.filter(c=>c.estatus===f.est);else C=C.filter(c=>c.estatus!=="inactivo"||f.q);
+  const last=mesesTodos().slice(-1)[0];
+  const vol=new Map();S.equipos.forEach(e=>{if(e.estatus==="instalado")vol.set(e.clienteId,(vol.get(e.clienteId)||0)+totalMes(e,last))});
+  C.sort((a,b)=>(vol.get(b._id)||0)-(vol.get(a._id)||0)||a.nombre.localeCompare(b.nombre));
+  return header("Clientes",`${[...S.clientes.values()].filter(c=>c.estatus==="activo").length} activos de ${S.clientes.size} registrados.`,canW()?`<button class="btn pri" data-a="nuevoCliente">+ Nuevo cliente</button>`:"")+
+  `<div class="filters"><input class="f" placeholder="Buscar por nombre, RFC o municipio" data-f="cli.q" value="${esc(f.q||"")}" style="flex:1;min-width:200px"><select class="f" data-f="cli.est"><option value="">Activos y prospectos</option>${["activo","prospecto","inactivo"].map(x=>`<option value="${x}" ${f.est===x?"selected":""}>${x[0].toUpperCase()+x.slice(1)}</option>`).join("")}</select></div>
+  <div class="panel wrap"><table class="tbl"><tr><th>Cliente</th><th>Estatus</th><th>Equipos</th><th>Páginas ${last?mlabel(last):""}</th><th>Tickets abiertos</th></tr>
+  ${C.map(c=>{const ab=[...S.tickets.values()].filter(t=>t.clienteId===c._id&&t.estado!=="cerrado").length;return `<tr class="click" data-cli="${esc(c._id)}"><td class="b">${esc(c.nombre)}${c.municipio?`<div class="muted sm" style="font-weight:400">${esc(c.municipio)}</div>`:""}</td><td><span class="chip ${c.estatus==="activo"?"ok":c.estatus==="prospecto"?"blue":""}">${esc(c.estatus)}</span></td><td>${c.equiposActivos??0}</td><td>${fmt(vol.get(c._id)||0)}</td><td>${ab||"—"}</td></tr>`}).join("")||`<tr><td colspan="5" class="empty">Sin resultados.</td></tr>`}</table></div>`;
+}
+function vEquipos(){
+  const f=S.filters.eq||{};let E=[...S.equipos.values()];
+  if(!f.est)E=E.filter(e=>e.estatus!=="retirado");else E=E.filter(e=>e.estatus===f.est);
+  if(f.marca)E=E.filter(e=>e.marca===f.marca);
+  if(f.q){const q=f.q.toLowerCase();E=E.filter(e=>(e.serie+" "+e.modelo+" "+e.cliente+" "+e.ubicacion).toLowerCase().includes(q))}
+  E.sort((a,b)=>(b.prom||0)-(a.prom||0));
+  const marcas=[...new Set([...S.equipos.values()].map(e=>e.marca))].sort();
+  return header("Equipos",`${[...S.equipos.values()].filter(e=>e.estatus==="instalado").length} instalados · ${[...S.equipos.values()].filter(e=>e.estatus==="respaldo").length} de respaldo · ${[...S.equipos.values()].filter(e=>e.estatus==="taller").length} en taller.`)+
+  `<div class="filters"><input class="f" placeholder="Serie, modelo, cliente o ubicación" data-f="eq.q" value="${esc(f.q||"")}" style="flex:1;min-width:200px">
+  <select class="f" data-f="eq.marca"><option value="">Todas las marcas</option>${marcas.map(m=>`<option ${f.marca===m?"selected":""}>${esc(m)}</option>`).join("")}</select>
+  <select class="f" data-f="eq.est"><option value="">En operación</option>${["instalado","respaldo","taller","almacen","retirado"].map(x=>`<option ${f.est===x?"selected":""}>${x}</option>`).join("")}</select></div>
+  <div class="panel wrap"><table class="tbl"><tr><th>Serie</th><th>Modelo</th><th>Cliente · ubicación</th><th>Prom./mes</th><th>Estatus</th></tr>
+  ${E.slice(0,400).map(e=>`<tr class="click" data-eq="${esc(e._id)}"><td class="b">${esc(e.serie)}</td><td>${esc(e.modelo)}<div class="muted sm">${esc(e.marca)}${e.color?" · color":""}</div></td><td>${esc(e.cliente)}<div class="muted sm">${esc(e.ubicacion)}</div></td><td>${fmt(e.prom)}</td><td><span class="chip ${e.estatus==="instalado"?"ok":e.estatus==="taller"?"warn":""}">${esc(e.estatus)}</span></td></tr>`).join("")}</table>${E.length>400?`<p class="muted sm">Mostrando 400 de ${E.length}. Usa el buscador.</p>`:""}</div>`;
+}
+function vToner(){
+  const tab=S.filters.tonTab||"sol";
+  const SOL=[...S.sol.values()].sort((a,b)=>b.fecha-a.fecha);const INV=[...S.inv.values()].sort((a,b)=>a.item.localeCompare(b.item));
+  const bajo=INV.filter(i=>(+i.cant||0)<=(+i.min||0));
+  let body="";
+  if(tab==="sol")body=`<div class="panel wrap"><table class="tbl"><tr><th>Folio</th><th>Cliente</th><th>Pedido</th><th>Fecha</th><th>Estado</th><th></th></tr>${SOL.map(s=>`<tr><td class="b">${esc(s.folio)}</td><td>${esc(s.cliente)}<div class="muted sm">${esc(s.solicitante||"")}</div></td><td class="sm">${(s.partidas||[]).map(p=>`${esc(p.cant)} × ${esc(p.toner)} <span class="muted">(${esc(p.impresora)})</span>`).join("<br>")}</td><td class="sm">${fd(s.fecha)}</td><td><select class="f" data-solst="${esc(s._id)}" ${canW()?"":"disabled"}>${["pendiente","preparado","enviado","entregado"].map(x=>`<option ${s.estado===x?"selected":""}>${x}</option>`).join("")}</select></td><td class="row"><button class="btn sm" data-vale="${esc(s._id)}">Vale PDF</button></td></tr>`).join("")||`<tr><td colspan="6" class="empty">Sin solicitudes. Registra la primera con «Nueva solicitud».</td></tr>`}</table></div>`;
+  if(tab==="inv")body=`${bajo.length?`<div class="panel" style="border-color:var(--warn);margin-bottom:12px"><b>Stock bajo:</b> ${bajo.map(i=>esc(i.item)).join(", ")}</div>`:""}<div class="panel wrap"><table class="tbl"><tr><th>Tóner / pieza</th><th>Tipo</th><th>En almacén</th><th>Mínimo</th><th></th></tr>${INV.map(i=>`<tr><td class="b">${esc(i.item)}</td><td>${esc(i.tipo||"tóner")}</td><td><span class="chip ${(+i.cant||0)<=(+i.min||0)?"bad":"ok"}">${fmt(i.cant)}</span></td><td>${fmt(i.min)}</td><td class="row">${canW()?`<button class="btn sm" data-mov="${esc(i._id)}" data-d="1">+1</button><button class="btn sm" data-mov="${esc(i._id)}" data-d="-1">−1</button><button class="btn sm" data-editinv="${esc(i._id)}">Editar</button>`:""}</td></tr>`).join("")||`<tr><td colspan="5" class="empty">Aún no hay inventario. Lalo puede darlo de alta con «Agregar artículo».</td></tr>`}</table></div>`;
+  if(tab==="cat")body=`<div class="panel wrap"><table class="tbl"><tr><th>Marca</th><th>Impresora</th><th>Tóner</th></tr>${S.toner.map(x=>`<tr><td>${esc(x.marca)}</td><td>${esc(x.impresora)}</td><td class="b">${esc(x.toner)}</td></tr>`).join("")}</table></div>`;
+  return header("Tóner y consumibles",`${SOL.filter(s=>s.estado!=="entregado").length} solicitudes abiertas · ${bajo.length} artículos con stock bajo.`,canW()?`<button class="btn pri" data-a="nuevaSol">+ Nueva solicitud</button><button class="btn" data-a="nuevoInv">Agregar artículo</button>`:"")+
+  `<div class="tabs">${[["sol","Solicitudes"],["inv","Inventario"],["cat","Catálogo impresora → tóner"]].map(([k,n])=>`<button class="${tab===k?"on":""}" data-tab="${k}">${n}</button>`).join("")}</div>`+body;
+}
+function vComercial(){
+  const O=[...S.opps.values()];
+  return header("Embudo comercial",`${O.filter(o=>!["ganado","perdido"].includes(o.etapa)).length} oportunidades abiertas. La base de 41,094 prospectos sigue en el CRM de llamadas.`,`${canW()?`<button class="btn pri" data-a="nuevaOpp">+ Nueva oportunidad</button>`:""}<a class="btn" href="https://claude.ai/artifact/AwoMHTGmiECe1uQSkQ9sKm" target="_blank" rel="noopener">Abrir CRM de prospectos</a>`)+
+  `<div class="board" data-board="opp">${ETAPAS.map(([k,n])=>{const it=O.filter(o=>o.etapa===k);const v=it.reduce((s,o)=>s+(+o.valor||0),0);return `<div class="col" data-col="${k}"><h3>${n}<span>${it.length}${v?" · "+money(v):""}</span></h3>${it.map(o=>`<div class="card" draggable="true" data-opp="${esc(o._id)}"><div class="t">${esc(o.empresa)}</div><div class="muted sm">${esc(o.tipo||"")}${o.equipos?" · "+esc(o.equipos)+" equipos":""}</div>${o.valor?`<div class="b">${money(o.valor)}/mes</div>`:""}${o.prox?`<div class="sm ${o.prox<Date.now()?"":"muted"}" style="${o.prox<Date.now()?"color:var(--bad)":""}">Seguimiento ${fd(o.prox)}</div>`:""}</div>`).join("")}</div>`}).join("")}</div>`;
+}
+function vMensajes(){
+  return header("Mensajes","Plantillas para WhatsApp. Desde cada ticket o cliente se rellenan solas con los datos y se abren en WhatsApp.")+
+  `<div class="grid g11">${PLANTILLAS.map(p=>`<div class="panel"><h2>${esc(p.n)}</h2><p class="sm" style="margin:0">${esc(p.t)}</p></div>`).join("")}</div>`;
+}
+function vConfig(){
+  const U=Object.entries(S.usuarios);
+  return header("Equipo y accesos","Cada persona entra con su correo; aquí le asignas su rol y el nombre que verá el equipo.")+
+  `<div class="panel" style="margin-bottom:16px"><h2>Agregar persona</h2><p class="muted sm" style="margin-top:0">Primero invítala en Supabase (Authentication → Users → Invite) con su correo; luego dale aquí su rol.</p><div class="row"><input class="f" id="usrid" type="email" placeholder="correo@officeautomation.com.mx" style="flex:1;min-width:220px"><input class="f" id="usrn" placeholder="Nombre que verá el equipo" style="flex:1;min-width:180px"><select class="f" id="usrr">${Object.entries(ROLES).map(([k,n])=>`<option value="${k}">${n}</option>`).join("")}</select><button class="btn pri" data-a="addId">Agregar</button></div></div>
+  <div class="panel wrap"><table class="tbl"><tr><th>Correo</th><th>Nombre en el sistema</th><th>Rol</th><th></th></tr>${U.map(([id,u])=>`<tr><td class="sm">${esc(id)}</td><td><input class="f" value="${esc(u.alias||"")}" data-ualias="${esc(id)}"></td><td><select class="f" data-urol="${esc(id)}">${Object.entries(ROLES).map(([k,n])=>`<option value="${k}" ${u.rol===k?"selected":""}>${n}</option>`).join("")}<option value="" ${!u.rol?"selected":""}>Sin acceso</option></select></td><td><button class="btn sm" data-udel="${esc(id)}">Quitar</button></td></tr>`).join("")||`<tr><td colspan="4" class="empty">Aún no hay personas dadas de alta.</td></tr>`}</table></div>`;
+}
+
+/* ===================== fichas (drawer) ===================== */
+function drawer(html,onBind){const L=$("#layer");L.innerHTML=`<div class="ov" data-ovl><div class="dr" role="dialog" aria-modal="true">${html}</div></div>`;onBind&&onBind(L);L.querySelector("[data-ovl]").addEventListener("click",e=>{if(e.target.dataset.ovl!==undefined||e.target.closest("[data-close]"))closeDr()})}
+function closeDr(){$("#layer").innerHTML="";S.openTicket=null}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDr()});
+function sparkBars(e){const ms=mesesTodos();const mx=Math.max(1,...ms.map(m=>totalMes(e,m)));return `<div class="bars" style="height:140px">${ms.map(m=>{const v=(e.lect||{})[m]||{};return `<div class="bw" title="${mlabel(m)}: ${fmt(v.bn)} B/N · ${fmt(v.color)} color"><div class="st" style="height:${Math.round(100*((v.bn||0)+(v.color||0))/mx)}%"><div style="flex:${v.bn||0};background:var(--navy2);min-height:1px"></div><div style="flex:${v.color||0};background:var(--m)"></div></div><small>${mlabel(m).slice(0,3)}</small></div>`}).join("")}</div>`}
+function openCliente(id,tab="resumen"){
+  const c=S.clientes.get(id);if(!c)return;
+  const E=[...S.equipos.values()].filter(e=>e.clienteId===id);const inst=E.filter(e=>e.estatus==="instalado");
+  const T=[...S.tickets.values()].filter(t=>t.clienteId===id).sort((a,b)=>b.creado-a.creado);
+  const ms=mesesTodos();const tot={b:0,c:0};
+  const agg=ms.map(m=>{let b=0,cc=0;inst.forEach(e=>{const v=(e.lect||{})[m];if(v){b+=v.bn||0;cc+=v.color||0}});return{m,b,c:cc}});
+  const mx=Math.max(1,...agg.map(x=>x.b+x.c));
+  const prom=Math.round(agg.slice(-3).reduce((s,x)=>s+x.b+x.c,0)/3);
+  const tabs=[["resumen","Resumen"],["equipos",`Equipos (${inst.length})`],["tickets",`Tickets (${T.length})`],["contactos",`Contactos (${(c.contactos||[]).length})`],["datos","Datos"]];
+  let b="";
+  if(tab==="resumen")b=`<div class="kpis" style="grid-template-columns:repeat(3,1fr)"><div class="kpi"><i class="ink" style="background:var(--c)"></i><div class="v">${inst.length}</div><div class="l">equipos instalados</div></div><div class="kpi"><i class="ink" style="background:var(--m)"></i><div class="v">${fmt(prom)}</div><div class="l">páginas/mes (últ. 3 meses)</div></div><div class="kpi"><i class="ink" style="background:var(--y)"></i><div class="v">${T.filter(t=>t.estado!=="cerrado").length}</div><div class="l">tickets abiertos</div></div></div>
+  <div class="panel" style="margin-top:14px"><h2>Consumo mensual</h2><div class="bars" style="height:150px">${agg.map(x=>`<div class="bw" title="${mlabel(x.m)}: ${fmt(x.b)} B/N · ${fmt(x.c)} color"><div class="st" style="height:${Math.round(100*(x.b+x.c)/mx)}%"><div style="flex:${x.b};background:var(--navy2);min-height:1px"></div><div style="flex:${x.c};background:var(--m)"></div></div><small>${mlabel(x.m).slice(0,3)}</small></div>`).join("")}</div></div>
+  ${c.notas?`<div class="panel" style="margin-top:14px"><h2>Notas</h2><div class="sm" style="white-space:pre-wrap">${esc(c.notas)}</div></div>`:""}`;
+  if(tab==="equipos")b=`<div class="panel wrap"><table class="tbl"><tr><th>Serie</th><th>Modelo</th><th>Ubicación</th><th>Prom./mes</th><th></th></tr>${E.sort((a,b)=>(a.estatus>b.estatus?1:-1)).map(e=>`<tr class="click" data-eq="${esc(e._id)}"><td class="b">${esc(e.serie)}</td><td>${esc(e.modelo)}</td><td class="sm">${esc(e.ubicacion)}</td><td>${fmt(e.prom)}</td><td><span class="chip ${e.estatus==="instalado"?"ok":""}">${esc(e.estatus)}</span></td></tr>`).join("")}</table></div>`;
+  if(tab==="tickets")b=`<div class="row" style="margin-bottom:10px">${can("servicio")?`<button class="btn pri" data-a="nuevoTicketCli" data-id="${esc(id)}">+ Ticket para este cliente</button>`:""}</div>`+(T.map(ticketCard).join("")||`<div class="empty">Sin tickets.</div>`);
+  if(tab==="contactos")b=`${(c.contactos||[]).map((k,i)=>`<div class="tcard"><div class="row" style="justify-content:space-between"><span class="b">${esc(k.nombre)}</span><span class="muted sm">${esc(k.cargo||"")}</span></div><div class="sm">${esc(k.tel||"")} ${k.correo?" · "+esc(k.correo):""}</div><div class="row" style="margin-top:8px">${k.tel?`<a class="btn wa sm" target="_blank" rel="noopener" href="${waLink(k.tel,"Hola "+k.nombre+", le escribe Office Automation.")}">WhatsApp</a>`:""}${canW()?`<button class="btn sm" data-delcont="${i}" data-id="${esc(id)}">Quitar</button>`:""}</div></div>`).join("")||`<div class="empty">Sin contactos. Agrega a la persona de Sistemas o Compras: es el contacto clave.</div>`}
+   ${canW()?`<div class="panel"><h2>Agregar contacto</h2><div class="form"><label class="fl">Nombre<input class="f" id="kn"></label><label class="fl">Cargo<input class="f" id="kc"></label><label class="fl">Teléfono / WhatsApp<input class="f" id="kt" inputmode="tel"></label><label class="fl">Correo<input class="f" id="ke" type="email"></label></div><div class="row" style="margin-top:10px"><button class="btn pri" data-a="addCont" data-id="${esc(id)}">Guardar contacto</button></div></div>`:""}`;
+  if(tab==="datos")b=`<div class="panel"><div class="form">${[["nombre","Razón social"],["rfc","RFC"],["municipio","Municipio"],["telefono","Teléfono"],["correo","Correo de facturación"],["responsable","Responsable comercial"]].map(([k,n])=>`<label class="fl">${n}<input class="f" data-cf="${k}" value="${esc(c[k]||"")}" ${canW()?"":"disabled"}></label>`).join("")}<label class="fl">Estatus<select class="f" data-cf="estatus" ${canW()?"":"disabled"}>${["activo","prospecto","inactivo"].map(x=>`<option ${c.estatus===x?"selected":""}>${x}</option>`).join("")}</select></label><label class="fl full">Notas<textarea class="f" data-cf="notas" ${canW()?"":"disabled"}>${esc(c.notas||"")}</textarea></label></div>${canW()?`<div class="row" style="margin-top:12px"><button class="btn pri" data-a="saveCli" data-id="${esc(id)}">Guardar cambios</button></div>`:""}</div>`;
+  drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>${esc(c.nombre)}</h2><div class="muted">${esc(c.estatus)}${c.municipio?" · "+esc(c.municipio):""}</div><div class="tabs">${tabs.map(([k,n])=>`<button class="${tab===k?"on":""}" data-ctab="${k}">${n}</button>`).join("")}</div>${b}`,L=>{
+    L.querySelectorAll("[data-ctab]").forEach(x=>x.onclick=()=>openCliente(id,x.dataset.ctab));bindCommon(L)});
+}
+function openEquipo(id){
+  const e=S.equipos.get(id);if(!e)return;
+  const T=[...S.tickets.values()].filter(t=>t.equipoId===id).sort((a,b)=>b.creado-a.creado);
+  const ms=mesesTodos();
+  drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>${esc(e.modelo)}</h2><div class="muted">Serie ${esc(e.serie)} · ${esc(e.marca)}${e.color?" · color":""}</div>
+  <div class="row" style="margin:12px 0"><button class="btn sm" data-cli="${esc(e.clienteId)}">${esc(e.cliente)}</button><span class="muted sm">${esc(e.ubicacion)}</span></div>
+  <div class="panel"><h2>Páginas por mes</h2>${sparkBars(e)}<div class="wrap"><table class="tbl sm"><tr><th>Mes</th>${ms.map(m=>`<th>${mlabel(m)}</th>`).join("")}</tr><tr><td>B/N</td>${ms.map(m=>`<td>${fmt(((e.lect||{})[m]||{}).bn)}</td>`).join("")}</tr>${e.color?`<tr><td>Color</td>${ms.map(m=>`<td>${fmt(((e.lect||{})[m]||{}).color)}</td>`).join("")}</tr>`:""}</table></div></div>
+  <div class="panel" style="margin-top:14px"><h2>Ficha</h2><div class="form">
+   <label class="fl">Estatus<select class="f" data-ef="estatus" ${canW()?"":"disabled"}>${["instalado","respaldo","taller","almacen","retirado"].map(x=>`<option ${e.estatus===x?"selected":""}>${x}</option>`).join("")}</select></label>
+   <label class="fl">Monitoreo KFS<select class="f" data-ef="kfs" ${canW()?"":"disabled"}><option value="">Sin dato</option><option value="si" ${e.kfs==="si"?"selected":""}>Sí</option><option value="no" ${e.kfs==="no"?"selected":""}>No</option></select></label>
+   <label class="fl">Frecuencia de preventivo<select class="f" data-ef="frec" ${canW()?"":"disabled"}>${["mensual","bimestral","trimestral"].map(x=>`<option ${e.frec===x?"selected":""}>${x}</option>`).join("")}</select></label>
+   <label class="fl">Último preventivo<input class="f" type="date" data-ef="ultPrev" value="${e.ultPrev?new Date(e.ultPrev).toISOString().slice(0,10):""}" ${canW()?"":"disabled"}></label>
+   <label class="fl full">Ubicación<input class="f" data-ef="ubicacion" value="${esc(e.ubicacion)}" ${canW()?"":"disabled"}></label>
+   <label class="fl full">Notas<textarea class="f" data-ef="notas" ${canW()?"":"disabled"}>${esc(e.notas||"")}</textarea></label></div>
+   ${canW()?`<div class="row" style="margin-top:12px"><button class="btn pri" data-a="saveEq" data-id="${esc(id)}">Guardar</button>${can("servicio")?`<button class="btn" data-a="nuevoTicketEq" data-id="${esc(id)}">+ Ticket para este equipo</button>`:""}</div>`:""}</div>
+  <h2 style="font-size:16.5px;margin:18px 0 10px">Historial de servicio</h2>${T.map(ticketCard).join("")||`<div class="muted">Sin servicios registrados en el sistema.</div>`}`,L=>bindCommon(L));
+}
+function waLink(tel,txt){let n=String(tel||"").replace(/\D/g,"");if(n.length===10)n="52"+n;return `https://wa.me/${n}?text=${encodeURIComponent(txt)}`}
+function fillTpl(p,t){const c=S.clientes.get(t.clienteId)||{};const k=(c.contactos||[])[0]||{};return p.t.replace(/\{(\w+)\}/g,(_,v)=>({contacto:t.reportadoPor||k.nombre||"",cliente:t.cliente||c.nombre||"",folio:t.folio||"",modelo:t.modelo||"",serie:t.serie||"",tecnico:nombreDe(t.tecnicoId),compromiso:fdt(t.compromiso)}[v]??""))}
+function openTicket(id){
+  const t=S.tickets.get(id);if(!t)return;S.openTicket=id;
+  const s=slaInfo(t);const w=canW()&&(can("servicio")||t.tecnicoId===S.me?.id);
+  const tel=t.telefono||((S.clientes.get(t.clienteId)||{}).contactos||[])[0]?.tel||"";
+  const fotos=(t.fotos||[]).map(f=>`<img src="${esc(fotoUrl(f))}" alt="Foto del servicio" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)">`).join("");
+  drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>${esc(t.folio)} · ${esc(t.cliente)}</h2>
+  <div class="row" style="margin:6px 0 4px"><span class="chip ${s.k}">${s.txt}</span><span class="muted sm">Reportado ${fdt(t.creado)} · compromiso ${fdt(t.compromiso)}</span></div>
+  <div class="panel" style="margin-top:12px"><div class="form">
+   <div><div class="muted sm b">Equipo</div>${esc(t.modelo||"—")}<div class="muted sm">${t.serie?"Serie "+esc(t.serie):""} ${esc(t.ubicacion||"")}</div></div>
+   <div><div class="muted sm b">Reportó</div>${esc(t.reportadoPor||"—")}<div class="muted sm">${esc(t.depto||"")} ${esc(tel)}</div></div>
+   <label class="fl">Estado<select class="f" data-tf="estado" ${w?"":"disabled"}>${ESTADOS.map(([k,n])=>`<option value="${k}" ${t.estado===k?"selected":""}>${n}</option>`).join("")}</select></label>
+   <label class="fl">Técnico<select class="f" data-tf="tecnicoId" ${w&&can("asignar")?"":"disabled"}><option value="">Sin asignar</option>${tecnicos().map(u=>`<option value="${esc(u.id)}" ${t.tecnicoId===u.id?"selected":""}>${esc(u.alias)}</option>`).join("")}</select></label>
+   <label class="fl">Tipo de servicio<select class="f" data-tf="tipo" ${w?"":"disabled"}>${TIPOS.map(x=>`<option ${t.tipo===x?"selected":""}>${x}</option>`).join("")}</select></label>
+   <label class="fl">Prioridad<select class="f" data-tf="prioridad" ${w?"":"disabled"}>${["Normal","Alta","Crítica"].map(x=>`<option ${t.prioridad===x?"selected":""}>${x}</option>`).join("")}</select></label>
+   <label class="fl full">Descripción del problema<textarea class="f" data-tf="desc" ${w?"":"disabled"}>${esc(t.desc||"")}</textarea></label></div></div>
+  <div class="panel" style="margin-top:14px"><h2>Reporte de servicio</h2>
+   <div class="form"><label class="fl">Contador inicial<input class="f" inputmode="numeric" data-tf="ci" value="${esc(t.ci||"")}" ${w?"":"disabled"}></label><label class="fl">Contador final<input class="f" inputmode="numeric" data-tf="cf" value="${esc(t.cf||"")}" ${w?"":"disabled"}></label></div>
+   <div class="muted sm b" style="margin:14px 0 8px">Check list preventivo</div>
+   <div class="chk">${CHECK.map((x,i)=>`<label><input type="checkbox" data-chk="${i}" ${(t.checklist||{})[i]?"checked":""} ${w?"":"disabled"}>${x}</label>`).join("")}</div>
+   <div class="form" style="margin-top:12px"><label class="fl full">Acciones realizadas y comentarios<textarea class="f" data-tf="acciones" ${w?"":"disabled"}>${esc(t.acciones||"")}</textarea></label>
+   <label class="fl">Refacciones usadas<input class="f" data-tf="refacciones" value="${esc(t.refacciones||"")}" ${w?"":"disabled"}></label>
+   <label class="fl">Estatus final<select class="f" data-tf="estatusFinal" ${w?"":"disabled"}><option value="">—</option>${FINAL.map(x=>`<option ${t.estatusFinal===x?"selected":""}>${x}</option>`).join("")}</select></label>
+   <label class="fl">Calificación del cliente<select class="f" data-tf="calif" ${w?"":"disabled"}><option value="">—</option>${["Excelente","Bueno","Regular","Malo"].map(x=>`<option ${t.calif===x?"selected":""}>${x}</option>`).join("")}</select></label>
+   <label class="fl">Nombre de quien firma<input class="f" data-tf="firmaNombre" value="${esc(t.firmaNombre||"")}" ${w?"":"disabled"}></label></div>
+   <div class="muted sm b" style="margin:14px 0 8px">Fotos</div><div class="row">${fotos}${w?`<label class="btn sm">Agregar foto<input type="file" accept="image/*" capture="environment" id="foto" class="hide"></label>`:""}</div>
+   <div class="muted sm b" style="margin:14px 0 8px">Firma del cliente</div>
+   ${t.firma?`<img src="${esc(t.firma)}" alt="Firma del cliente" style="max-width:100%;height:120px;background:#fff;border-radius:10px;border:1px solid var(--line)">`:""}
+   ${w?`<canvas class="sig" id="sig"></canvas><div class="row" style="margin-top:6px"><button class="btn sm" data-a="sigClear">Borrar firma</button></div>`:""}
+   ${w?`<div class="row" style="margin-top:16px"><button class="btn pri" data-a="saveTk" data-id="${esc(id)}">Guardar</button><button class="btn" data-a="closeTk" data-id="${esc(id)}">Guardar y cerrar servicio</button><button class="btn" data-a="pdfTk" data-id="${esc(id)}">Reporte PDF</button></div>`:`<div class="row" style="margin-top:16px"><button class="btn" data-a="pdfTk" data-id="${esc(id)}">Reporte PDF</button></div>`}
+  </div>
+  <div class="panel" style="margin-top:14px"><h2>Avisar al cliente por WhatsApp</h2><div class="row">${["recibido","camino","cerrado"].map(k=>{const p=PLANTILLAS.find(x=>x.id===k);return tel?`<a class="btn wa sm" target="_blank" rel="noopener" href="${waLink(tel,fillTpl(p,t))}">${esc(p.n)}</a>`:""}).join("")||`<span class="muted sm">Agrega un teléfono al ticket o un contacto al cliente para enviar avisos.</span>`}</div></div>
+  <div class="panel" style="margin-top:14px"><h2>Historial</h2>${(t.hist||[]).slice().reverse().map(h=>`<div class="sm"><span class="muted">${fdt(h.t)}</span> · ${esc(h.ev)} <span class="muted">(${esc(nombreDe(h.por)||"")})</span></div>`).join("")}</div>`,L=>{bindCommon(L);setupSig(L)});
+}
+let sigDirty=false;
+function setupSig(L){const c=L.querySelector("#sig");if(!c)return;sigDirty=false;const r=c.getBoundingClientRect();c.width=r.width*2;c.height=r.height*2;const x=c.getContext("2d");x.scale(2,2);x.lineWidth=2.2;x.lineCap="round";x.strokeStyle="#16263D";let dn=false;
+  const p=e=>{const b=c.getBoundingClientRect();return[e.clientX-b.left,e.clientY-b.top]};
+  c.addEventListener("pointerdown",e=>{dn=true;c.setPointerCapture(e.pointerId);const[a,b]=p(e);x.beginPath();x.moveTo(a,b)});
+  c.addEventListener("pointermove",e=>{if(!dn)return;const[a,b]=p(e);x.lineTo(a,b);x.stroke();sigDirty=true});
+  c.addEventListener("pointerup",()=>dn=false)}
+
+/* ===================== formularios rápidos ===================== */
+function equipoPicker(pre){
+  return `<label class="fl full">Equipo (serie, modelo o cliente)<input class="f" id="eqq" placeholder="Ej. R4V2532282 o Clavos" value="${esc(pre||"")}" autocomplete="off"></label><div id="eqres" class="full"></div>`;
+}
+function nuevoTicket(pre={}){
+  const e=pre.equipoId?S.equipos.get(pre.equipoId):null;
+  drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>Nuevo ticket</h2><p class="muted">Se calcula solo el compromiso de atención y se asigna folio.</p>
+  <div class="panel"><div class="form">
+   ${equipoPicker(e?e.serie:"")}
+   <input type="hidden" id="tk_eq" value="${esc(pre.equipoId||"")}"><input type="hidden" id="tk_cli" value="${esc(pre.clienteId||e?.clienteId||"")}">
+   <div class="full sm" id="tk_sel">${e?`<b>${esc(e.cliente)}</b> · ${esc(e.modelo)} · ${esc(e.ubicacion)}`:pre.clienteId?`<b>${esc(S.clientes.get(pre.clienteId)?.nombre)}</b> (sin equipo específico)`:""}</div>
+   <label class="fl">Tipo<select class="f" id="tk_tipo">${TIPOS.map(x=>`<option ${pre.tipo===x?"selected":""}>${x}</option>`).join("")}</select></label>
+   <label class="fl">Prioridad<select class="f" id="tk_pri"><option>Normal</option><option>Alta</option><option>Crítica</option></select></label>
+   <label class="fl">Canal<select class="f" id="tk_can">${["WhatsApp","Correo","Teléfono","KFS","Interno"].map(x=>`<option>${x}</option>`).join("")}</select></label>
+   <label class="fl">Técnico<select class="f" id="tk_tec"><option value="">Sin asignar</option>${tecnicos().map(u=>`<option value="${esc(u.id)}">${esc(u.alias)}</option>`).join("")}</select></label>
+   <label class="fl">Reportado por<input class="f" id="tk_rep"></label><label class="fl">Teléfono / WhatsApp<input class="f" id="tk_tel" inputmode="tel"></label>
+   <label class="fl">Departamento<input class="f" id="tk_dep"></label><div></div>
+   <label class="fl full">Descripción del problema<textarea class="f" id="tk_desc">${esc(pre.desc||"")}</textarea></label>
+  </div><div class="row" style="margin-top:14px"><button class="btn pri" data-a="crearTicket">Crear ticket</button></div></div>`,L=>{bindCommon(L);bindPicker(L)});
+}
+function bindPicker(L){const q=L.querySelector("#eqq");if(!q)return;const res=L.querySelector("#eqres");
+  const run=()=>{const v=q.value.trim().toLowerCase();if(v.length<2){res.innerHTML="";return}
+   const R=[...S.equipos.values()].filter(e=>e.estatus!=="retirado"&&(e.serie+" "+e.modelo+" "+e.cliente+" "+e.ubicacion).toLowerCase().includes(v)).slice(0,8);
+   const C=[...S.clientes.values()].filter(c=>c.nombre.toLowerCase().includes(v)).slice(0,3);
+   res.innerHTML=R.map(e=>`<div class="card" data-pick="${esc(e._id)}"><b>${esc(e.serie)}</b> · ${esc(e.modelo)}<div class="muted sm">${esc(e.cliente)} · ${esc(e.ubicacion)}</div></div>`).join("")+C.map(c=>`<div class="card" data-pickc="${esc(c._id)}"><b>${esc(c.nombre)}</b><div class="muted sm">Cliente, sin equipo específico</div></div>`).join("");
+   res.querySelectorAll("[data-pick]").forEach(x=>x.onclick=()=>{const e=S.equipos.get(x.dataset.pick);L.querySelector("#tk_eq").value=e._id;L.querySelector("#tk_cli").value=e.clienteId;L.querySelector("#tk_sel").innerHTML=`<b>${esc(e.cliente)}</b> · ${esc(e.modelo)} · ${esc(e.ubicacion)}`;res.innerHTML="";q.value=e.serie});
+   res.querySelectorAll("[data-pickc]").forEach(x=>x.onclick=()=>{const c=S.clientes.get(x.dataset.pickc);L.querySelector("#tk_eq").value="";L.querySelector("#tk_cli").value=c._id;L.querySelector("#tk_sel").innerHTML=`<b>${esc(c.nombre)}</b> (sin equipo específico)`;res.innerHTML="";q.value=c.nombre})};
+  q.addEventListener("input",run);if(q.value&&!L.querySelector("#tk_eq").value)run()}
+async function folio(pref){
+  const ref=db.doc("config/contadores");const snap=await ref.get();const d=snap.exists?snap.data():{};const n=(d[pref]||0)+1;
+  if(snap.exists)await ref.update({[pref]:n});else await ref.set({[pref]:n});return pref+"-"+String(n).padStart(4,"0")}
+const hist=(t,ev)=>({...t,hist:[...(t.hist||[]),{t:Date.now(),ev,por:S.me?.id||""}]});
+async function save(path,data,msg){try{await db.doc(path).set(data);msg&&toast(msg);return true}catch(e){onWriteErr(e);return false}}
+async function upd(path,data,msg){try{await db.doc(path).update(data);msg&&toast(msg);return true}catch(e){onWriteErr(e);return false}}
+function onWriteErr(e){if(e&&e.code==="invalid_argument"&&S.canWrite==null){S.canWrite=false;toast("Tu acceso es de solo lectura.");render()}else toast("No se pudo guardar: "+(e?.message||e?.code||"error"))}
+
+/* ===================== PDF ===================== */
+async function savePdf(doc,name){
+  doc.save(name);toast("PDF descargado");
+}
+function pdfHeader(d,title,folioTxt){
+  const C=[[0,174,239],[236,0,140],[255,212,0],[26,26,26]];C.forEach((c,i)=>{d.setFillColor(...c);d.rect(14+(i%2)*5,12+Math.floor(i/2)*5,4.2,4.2,"F")});
+  d.setFont("helvetica","bold");d.setFontSize(12);d.setTextColor(22,38,61);d.text("OFFICE AUTOMATION",26,17);d.setFontSize(15);d.text(title,128,17,{align:"center"});
+  d.setFontSize(9);d.text("OASA",196,13,{align:"right"});d.setFont("helvetica","normal");d.text(folioTxt,196,18,{align:"right"});
+  d.setDrawColor(22,38,61);d.setLineWidth(.4);d.line(14,23,196,23)}
+function box(d,y,title,rows,h){d.setFillColor(220,230,242);d.rect(14,y,182,6,"F");d.setFont("helvetica","bold");d.setFontSize(9);d.setTextColor(22,38,61);d.text(title,105,y+4.2,{align:"center"});d.setDrawColor(150);d.rect(14,y,182,h);d.setFont("helvetica","normal");let yy=y+11;rows.forEach(r=>{d.setFont("helvetica","bold");d.text(r[0],17,yy);d.setFont("helvetica","normal");const l=d.splitTextToSize(String(r[1]||"—"),140);d.text(l,52,yy);yy+=5*Math.max(1,l.length)});return y+h+4}
+function pdfTicket(t){
+  const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"mm",format:"letter"});pdfHeader(d,"REPORTE DE SERVICIO","# ticket: "+t.folio);
+  const c=S.clientes.get(t.clienteId)||{};
+  let y=28;y=box(d,y,"Cliente atendido",[["Cliente",t.cliente],["Dirección",t.ubicacion||c.municipio||""],["Reportado por",(t.reportadoPor||"")+(t.depto?" · "+t.depto:"")],["Tipo de servicio",t.tipo],["Técnico",nombreDe(t.tecnicoId)]],36);
+  y=box(d,y,"Equipo",[["Modelo",t.modelo],["Número de serie",t.serie],["Contadores","Inicial "+(t.ci||"—")+"   ·   Final "+(t.cf||"—")]],24);
+  y=box(d,y,"Atención",[["Reporte",fdt(t.creado)],["Inicio",fdt(t.inicio)],["Fin",fdt(t.fin)],["Estatus final",t.estatusFinal||t.estado]],29);
+  const dl=d.splitTextToSize(t.desc||"—",172).slice(0,6);const dh=10+dl.length*5;d.setFillColor(220,230,242);d.rect(14,y,182,6,"F");d.setFont("helvetica","bold");d.text("Descripción del problema",105,y+4.2,{align:"center"});d.rect(14,y,182,dh);d.setFont("helvetica","normal");d.text(dl,17,y+11);y+=dh+4;
+  d.setFillColor(220,230,242);d.rect(14,y,182,6,"F");d.setFont("helvetica","bold");d.text("Check list preventivo",55,y+4.2,{align:"center"});d.text("Acciones realizadas y/o comentarios",150,y+4.2,{align:"center"});
+  d.rect(14,y,182,52);d.line(96,y,96,y+52);d.setFont("helvetica","normal");CHECK.forEach((x,i)=>{const on=(t.checklist||{})[i];d.rect(18,y+9+i*5.3,3,3);if(on){d.setFont("helvetica","bold");d.text("x",18.6,y+11.6+i*5.3);d.setFont("helvetica","normal")}d.text(x,24,y+11.5+i*5.3)});
+  d.text(d.splitTextToSize((t.acciones||"")+(t.refacciones?"\nRefacciones: "+t.refacciones:""),95).slice(0,9),99,y+11);y+=56;
+  d.setFillColor(220,230,242);d.rect(14,y,182,6,"F");d.setFont("helvetica","bold");d.text("Calificación del servicio: "+(t.calif||"—"),105,y+4.2,{align:"center"});y+=10;
+  d.rect(14,y,90,34);d.rect(106,y,90,34);d.text("NOMBRE Y FIRMA CLIENTE",59,y+4.5,{align:"center"});d.text("NOMBRE Y FIRMA TÉCNICO",151,y+4.5,{align:"center"});
+  if(t.firma){try{d.addImage(t.firma,"PNG",30,y+6,58,20)}catch(e){}}d.setFont("helvetica","normal");d.text(t.firmaNombre||"",59,y+31,{align:"center"});d.text(nombreDe(t.tecnicoId),151,y+31,{align:"center"});
+  d.setFontSize(8);d.setTextColor(90);d.text(EMPRESA.web+"  ·  WhatsApp 55-6015-5063",105,270,{align:"center"});
+  savePdf(d,"Reporte_"+t.folio+".pdf");
+}
+function pdfVale(s){
+  const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"mm",format:"letter"});pdfHeader(d,"ENTREGA DE SUMINISTRO","FOLIO: "+s.folio);
+  d.setFontSize(10);d.setFont("helvetica","bold");d.text("CLIENTE: ",14,34);d.setFont("helvetica","normal");d.text(String(s.cliente||""),34,34);
+  d.setFont("helvetica","bold");d.text("SOLICITANTE: ",14,40);d.setFont("helvetica","normal");d.text(String(s.solicitante||""),42,40);d.text("Fecha: "+fd(s.fecha),196,34,{align:"right"});
+  let y=48;d.setFillColor(220,230,242);d.rect(14,y,182,7,"F");d.setFont("helvetica","bold");[["ITEM",17],["MODELO DE EQUIPO",80],["CANTIDAD",170]].forEach(([h,x])=>d.text(h,x,y+5));y+=7;d.setFont("helvetica","normal");let tot=0;
+  (s.partidas||[]).forEach(p=>{d.rect(14,y,182,7);d.text(String(p.toner),17,y+5);d.text(String(p.impresora||""),80,y+5);d.text(String(p.cant),175,y+5);tot+=+p.cant||0;y+=7});
+  d.setFont("helvetica","bold");d.text("TOTAL",150,y+5);d.text(String(tot),175,y+5);y+=24;d.line(30,y,100,y);d.line(115,y,185,y);d.setFont("helvetica","normal");d.text("Entrega (Office Automation)",65,y+5,{align:"center"});d.text("Nombre y firma de quien recibe",150,y+5,{align:"center"});
+  d.setFontSize(8);d.setTextColor(90);d.text(EMPRESA.nombre+" · "+EMPRESA.dir,105,270,{align:"center"});
+  savePdf(d,"Vale_"+s.folio+".pdf");
+}
+
+/* ===================== eventos ===================== */
+function bindView(v){const m=$("#main");bindCommon(m);
+  m.querySelectorAll("[data-f]").forEach(el=>{const [g,k]=el.dataset.f.split(".");const h=()=>{S.filters[g]={...(S.filters[g]||{}),[k]:el.type==="checkbox"?el.checked:el.value};const pos=el.selectionStart;render();const n=m.querySelector(`[data-f="${el.dataset.f}"]`);if(n&&el.tagName==="INPUT"&&el.type!=="checkbox"){n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}};el.addEventListener(el.tagName==="INPUT"&&el.type!=="checkbox"?"input":"change",h)});
+  m.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{S.filters.tonTab=b.dataset.tab;render()});
+  // drag & drop
+  m.querySelectorAll("[data-board]").forEach(bd=>{const mode=bd.dataset.board;let dragId=null;
+    bd.querySelectorAll(".card[draggable=true]").forEach(c=>c.addEventListener("dragstart",e=>{dragId=c.dataset.tk||c.dataset.opp;e.dataTransfer.setData("text/plain",dragId)}));
+    bd.querySelectorAll(".col").forEach(col=>{col.addEventListener("dragover",e=>{e.preventDefault();col.classList.add("drop")});col.addEventListener("dragleave",()=>col.classList.remove("drop"));
+     col.addEventListener("drop",async e=>{e.preventDefault();col.classList.remove("drop");const id=e.dataTransfer.getData("text/plain");const k=col.dataset.col;
+      if(mode==="opp"){const o=S.opps.get(id);if(o&&o.etapa!==k)upd("oportunidades/"+id,{etapa:k,mov:Date.now()},"Movida a "+ETAPAS.find(x=>x[0]===k)[1])}
+      else{const t=S.tickets.get(id);if(!t)return;let ch;if(mode==="estado"){if(t.estado===k)return;ch=stPatch(t,k)}else{if(t.tecnicoId===k)return;ch={tecnicoId:k,estado:k&&t.estado==="abierto"?"asignado":t.estado};ch.hist=[...(t.hist||[]),{t:Date.now(),ev:k?"Asignado a "+nombreDe(k):"Sin asignar",por:S.me?.id||""}]}upd("tickets/"+id,ch,"Ticket actualizado")}})})});
+  if(v==="config"){m.querySelectorAll("[data-urol]").forEach(s=>s.onchange=()=>{const id=s.dataset.urol;setUsuarios({...S.usuarios,[id]:{...S.usuarios[id],rol:s.value}})});
+    m.querySelectorAll("[data-ualias]").forEach(s=>s.onchange=()=>{const id=s.dataset.ualias;setUsuarios({...S.usuarios,[id]:{...S.usuarios[id],alias:s.value}})});
+    m.querySelectorAll("[data-udel]").forEach(s=>s.onclick=()=>{const u={...S.usuarios};delete u[s.dataset.udel];setUsuarios(u)})}
+  m.querySelectorAll("[data-solst]").forEach(s=>s.onchange=()=>upd("solicitudes/"+s.dataset.solst,{estado:s.value},"Solicitud: "+s.value));
+}
+function stPatch(t,k){const ch={estado:k};const n=ESTADOS.find(x=>x[0]===k)[1];if(k==="en_sitio"&&!t.inicio)ch.inicio=Date.now();if(k==="cerrado"&&!t.fin)ch.fin=Date.now();ch.hist=[...(t.hist||[]),{t:Date.now(),ev:"Estado: "+n,por:S.me?.id||""}];return ch}
+async function setUsuarios(u){S.usuarios=u;await save("config/usuarios",{u},"Accesos actualizados")}
+function bindCommon(root){
+  root.querySelectorAll("[data-go]").forEach(x=>x.onclick=()=>location.hash=x.dataset.go);
+  root.querySelectorAll("[data-cli]").forEach(x=>x.onclick=e=>{e.stopPropagation();openCliente(x.dataset.cli)});
+  root.querySelectorAll("[data-eq]").forEach(x=>x.onclick=e=>{e.stopPropagation();openEquipo(x.dataset.eq)});
+  root.querySelectorAll("[data-tk]").forEach(x=>x.onclick=e=>{e.stopPropagation();openTicket(x.dataset.tk)});
+  root.querySelectorAll("[data-opp]").forEach(x=>x.onclick=()=>oppForm(x.dataset.opp));
+  root.querySelectorAll("[data-st]").forEach(x=>x.onclick=()=>{const t=S.tickets.get(x.dataset.st);upd("tickets/"+t._id,stPatch(t,x.dataset.v),x.dataset.v==="en_camino"?"Avisado: vas en camino":"Llegada registrada")});
+  root.querySelectorAll("[data-prev]").forEach(x=>x.onclick=()=>{const e=S.equipos.get(x.dataset.prev);nuevoTicket({equipoId:e._id,tipo:"Preventivo",desc:"Mantenimiento preventivo programado ("+e.frec+")."})});
+  root.querySelectorAll("[data-vale]").forEach(x=>x.onclick=()=>pdfVale(S.sol.get(x.dataset.vale)));
+  root.querySelectorAll("[data-mov]").forEach(x=>x.onclick=()=>{const i=S.inv.get(x.dataset.mov);upd("inventario/"+i._id,{cant:(+i.cant||0)+(+x.dataset.d)})});
+  root.querySelectorAll("[data-editinv]").forEach(x=>x.onclick=()=>invForm(x.dataset.editinv));
+  root.querySelectorAll("[data-delcont]").forEach(x=>x.onclick=()=>{const c=S.clientes.get(x.dataset.id);const k=[...(c.contactos||[])];k.splice(+x.dataset.delcont,1);upd("clientes/"+c._id,{contactos:k},"Contacto quitado").then(()=>setTimeout(()=>openCliente(c._id,"contactos"),300))});
+  const foto=root.querySelector("#foto");if(foto)foto.onchange=async()=>{const f=foto.files[0];if(!f)return;try{toast("Subiendo foto…");const t=S.tickets.get(S.openTicket);const path=t._id+"/"+uid()+".jpg";const {error}=await sb.storage.from("fotos").upload(path,await shrink(f),{contentType:"image/jpeg"});if(error)throw error;await upd("tickets/"+t._id,{fotos:[...(t.fotos||[]),path]},"Foto agregada");setTimeout(()=>openTicket(t._id),400)}catch(e){toast("No se pudo subir la foto")}};
+  root.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>A[b.dataset.a]&&A[b.dataset.a](b.dataset.id,root));
+}
+function shrink(file){return new Promise(res=>{const img=new Image();img.onload=()=>{const s=Math.min(1,1600/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=img.width*s;c.height=img.height*s;c.getContext("2d").drawImage(img,0,0,c.width,c.height);c.toBlob(b=>res(b||file),"image/jpeg",.82)};img.onerror=()=>res(file);img.src=URL.createObjectURL(file)})}
+const val=(r,s)=>(r.querySelector(s)?.value||"").trim();
+const A={
+ nuevoTicket:()=>nuevoTicket(),
+ nuevoTicketCli:id=>nuevoTicket({clienteId:id}),
+ nuevoTicketEq:id=>nuevoTicket({equipoId:id}),
+ async crearTicket(_,L){const eq=val(L,"#tk_eq"),cli=val(L,"#tk_cli");if(!cli){toast("Elige un equipo o un cliente");return}
+  const e=S.equipos.get(eq),c=S.clientes.get(cli);const now=Date.now();const tec=val(L,"#tk_tec");
+  const t={folio:await folio("OASA"),creado:now,compromiso:compromiso(now),clienteId:cli,cliente:c?.nombre||e?.cliente||"",equipoId:eq,serie:e?.serie||"",modelo:e?.modelo||"",ubicacion:e?.ubicacion||"",
+   tipo:val(L,"#tk_tipo"),prioridad:val(L,"#tk_pri"),canal:val(L,"#tk_can"),tecnicoId:tec,estado:tec?"asignado":"abierto",reportadoPor:val(L,"#tk_rep"),telefono:val(L,"#tk_tel"),depto:val(L,"#tk_dep"),desc:val(L,"#tk_desc"),
+   checklist:{},hist:[{t:now,ev:"Ticket creado"+(tec?" y asignado a "+nombreDe(tec):""),por:S.me?.id||""}]};
+  const id=uid();if(await save("tickets/"+id,t,"Ticket "+t.folio+" creado")){S.tickets.set(id,{...t,_id:id});openTicket(id)}},
+ sigClear(_,L){const c=L.querySelector("#sig");c.getContext("2d").clearRect(0,0,c.width,c.height);sigDirty=false},
+ async saveTk(id,L,close){const t=S.tickets.get(id);const ch={};L.querySelectorAll("[data-tf]").forEach(el=>ch[el.dataset.tf]=el.value);
+  const chk={};L.querySelectorAll("[data-chk]").forEach(el=>{if(el.checked)chk[el.dataset.chk]=true});ch.checklist=chk;
+  const sig=L.querySelector("#sig");if(sig&&sigDirty)ch.firma=sig.toDataURL("image/png");
+  let ev=[];if(ch.estado!==t.estado)Object.assign(ch,stPatch(t,ch.estado));if(ch.tecnicoId!==(t.tecnicoId||"")){ev.push(ch.tecnicoId?"Asignado a "+nombreDe(ch.tecnicoId):"Sin asignar");if(ch.tecnicoId&&ch.estado==="abierto")ch.estado="asignado"}
+  if(close){Object.assign(ch,stPatch({...t,...ch},"cerrado"));if(!ch.estatusFinal)ch.estatusFinal="Cerrado";
+    if(t.tipo==="Preventivo"&&t.equipoId)upd("equipos/"+t.equipoId,{ultPrev:Date.now()})}
+  ch.hist=[...(ch.hist||t.hist||[]),...ev.map(x=>({t:Date.now(),ev:x,por:S.me?.id||""})),{t:Date.now(),ev:close?"Reporte guardado":"Cambios guardados",por:S.me?.id||""}];
+  if(await upd("tickets/"+id,ch,close?"Servicio cerrado":"Guardado")){S.tickets.set(id,{...t,...ch});openTicket(id)}},
+ closeTk(id,L){A.saveTk(id,L,true)},
+ pdfTk:id=>pdfTicket(S.tickets.get(id)),
+ async saveCli(id,L){const ch={};L.querySelectorAll("[data-cf]").forEach(el=>ch[el.dataset.cf]=el.value);if(await upd("clientes/"+id,ch,"Cliente guardado"))setTimeout(()=>openCliente(id,"datos"),300)},
+ async addCont(id,L){const k={nombre:val(L,"#kn"),cargo:val(L,"#kc"),tel:val(L,"#kt"),correo:val(L,"#ke")};if(!k.nombre){toast("Escribe el nombre");return}const c=S.clientes.get(id);if(await upd("clientes/"+id,{contactos:[...(c.contactos||[]),k]},"Contacto agregado"))setTimeout(()=>openCliente(id,"contactos"),300)},
+ async saveEq(id,L){const ch={};L.querySelectorAll("[data-ef]").forEach(el=>ch[el.dataset.ef]=el.value);ch.ultPrev=ch.ultPrev?new Date(ch.ultPrev+"T12:00:00").getTime():null;ch.kfs=ch.kfs||null;if(await upd("equipos/"+id,ch,"Equipo guardado"))setTimeout(()=>openEquipo(id),300)},
+ nuevoCliente(){drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>Nuevo cliente</h2><div class="panel" style="margin-top:14px"><div class="form"><label class="fl full">Razón social<input class="f" id="nc_n"></label><label class="fl">RFC<input class="f" id="nc_r"></label><label class="fl">Municipio<input class="f" id="nc_m"></label><label class="fl">Estatus<select class="f" id="nc_e"><option>prospecto</option><option>activo</option></select></label></div><div class="row" style="margin-top:12px"><button class="btn pri" data-a="crearCli">Crear cliente</button></div></div>`,L=>bindCommon(L))},
+ async crearCli(_,L){const n=val(L,"#nc_n");if(!n){toast("Escribe la razón social");return}const id=n.normalize("NFKD").replace(/[^\w]+/g,"-").toLowerCase().replace(/^-|-$/g,"").slice(0,50)+"-"+uid().slice(-4);
+  if(await save("clientes/"+id,{nombre:n,rfc:val(L,"#nc_r"),municipio:val(L,"#nc_m"),estatus:val(L,"#nc_e"),contactos:[],equiposActivos:0,notas:""},"Cliente creado"))setTimeout(()=>openCliente(id,"datos"),400)},
+ nuevaSol(){const cat=S.toner;drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>Nueva solicitud de tóner</h2><div class="panel" style="margin-top:14px"><div class="form">
+   <label class="fl full">Cliente<select class="f" id="ns_c"><option value="">Elige un cliente</option>${[...S.clientes.values()].filter(c=>c.estatus==="activo").sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(c=>`<option value="${esc(c._id)}">${esc(c.nombre)}</option>`).join("")}</select></label>
+   <label class="fl">Solicitante<input class="f" id="ns_s"></label><label class="fl">Correo o teléfono<input class="f" id="ns_t"></label>
+   <div class="full" id="ns_p">${[0,1,2].map(i=>`<div class="row" style="margin-bottom:8px"><select class="f" data-pi="${i}" style="flex:2;min-width:180px"><option value="">Impresora / tóner…</option>${cat.map((x,j)=>`<option value="${j}">${esc(x.toner)} — ${esc(x.impresora)}</option>`).join("")}</select><input class="f" data-pq="${i}" type="number" min="1" value="1" style="width:80px"></div>`).join("")}</div></div>
+   <div class="row" style="margin-top:12px"><button class="btn pri" data-a="crearSol">Registrar solicitud</button></div></div>`,L=>bindCommon(L))},
+ async crearSol(_,L){const cid=val(L,"#ns_c");if(!cid){toast("Elige el cliente");return}const p=[];L.querySelectorAll("[data-pi]").forEach(s=>{if(s.value!==""){const x=S.toner[+s.value];p.push({toner:x.toner,impresora:x.impresora,cant:+L.querySelector(`[data-pq="${s.dataset.pi}"]`).value||1})}});
+  if(!p.length){toast("Agrega al menos un tóner");return}const id=uid();
+  if(await save("solicitudes/"+id,{folio:await folio("SAL"),clienteId:cid,cliente:S.clientes.get(cid).nombre,solicitante:val(L,"#ns_s"),contacto:val(L,"#ns_t"),partidas:p,estado:"pendiente",fecha:Date.now()},"Solicitud registrada"))closeDr()},
+ nuevoInv:()=>invForm(),
+ async saveInv(id,L){const d={item:val(L,"#iv_i"),tipo:val(L,"#iv_t"),cant:+val(L,"#iv_c")||0,min:+val(L,"#iv_m")||0};if(!d.item){toast("Escribe el artículo");return}if(await save("inventario/"+(id||uid()),d,"Inventario guardado"))closeDr()},
+ nuevaOpp:()=>oppForm(),
+ async saveOpp(id,L){const d={empresa:val(L,"#op_e"),contacto:val(L,"#op_c"),tel:val(L,"#op_t"),tipo:val(L,"#op_ti"),etapa:val(L,"#op_et"),valor:+val(L,"#op_v")||0,equipos:+val(L,"#op_q")||0,prox:val(L,"#op_p")?new Date(val(L,"#op_p")+"T12:00:00").getTime():null,notas:val(L,"#op_n"),resp:S.me?.id||""};
+  if(!d.empresa){toast("Escribe la empresa");return}const base={...(id?S.opps.get(id):{creado:Date.now()}),...d};delete base._id;if(await save("oportunidades/"+(id||uid()),base,"Oportunidad guardada"))closeDr()},
+ addId(_,L){const id=val(L,"#usrid").toLowerCase();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(id)){toast("Escribe un correo válido");return}setUsuarios({...S.usuarios,[id]:{alias:val(L,"#usrn")||id.split("@")[0],rol:val(L,"#usrr")}})}
+};
+function invForm(id){const i=id?S.inv.get(id):{};drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>${id?"Editar artículo":"Agregar artículo"}</h2><div class="panel" style="margin-top:14px"><div class="form"><label class="fl full">Tóner o pieza<input class="f" id="iv_i" value="${esc(i.item||"")}" list="tlist" placeholder="Ej. TK-1175"></label><datalist id="tlist">${[...new Set(S.toner.map(x=>x.toner))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist><label class="fl">Tipo<select class="f" id="iv_t">${["tóner","refacción","otro"].map(x=>`<option ${i.tipo===x?"selected":""}>${x}</option>`).join("")}</select></label><label class="fl">En almacén<input class="f" id="iv_c" type="number" value="${esc(i.cant??0)}"></label><label class="fl">Stock mínimo<input class="f" id="iv_m" type="number" value="${esc(i.min??1)}"></label></div><div class="row" style="margin-top:12px"><button class="btn pri" data-a="saveInv" data-id="${esc(id||"")}">Guardar</button></div></div>`,L=>bindCommon(L))}
+function oppForm(id){const o=id?S.opps.get(id):{etapa:"nuevo"};drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>${id?esc(o.empresa):"Nueva oportunidad"}</h2><div class="panel" style="margin-top:14px"><div class="form">
+ <label class="fl full">Empresa<input class="f" id="op_e" value="${esc(o.empresa||"")}"></label><label class="fl">Contacto<input class="f" id="op_c" value="${esc(o.contacto||"")}"></label><label class="fl">Teléfono<input class="f" id="op_t" value="${esc(o.tel||"")}"></label>
+ <label class="fl">Tipo<select class="f" id="op_ti">${["Renta de impresión","Renta de cómputo","Venta de seminuevo","Refacciones / tóner"].map(x=>`<option ${o.tipo===x?"selected":""}>${x}</option>`).join("")}</select></label>
+ <label class="fl">Etapa<select class="f" id="op_et">${ETAPAS.map(([k,n])=>`<option value="${k}" ${o.etapa===k?"selected":""}>${n}</option>`).join("")}</select></label>
+ <label class="fl">Valor mensual estimado (MXN)<input class="f" id="op_v" type="number" value="${esc(o.valor||"")}"></label><label class="fl">Equipos estimados<input class="f" id="op_q" type="number" value="${esc(o.equipos||"")}"></label>
+ <label class="fl">Próximo seguimiento<input class="f" id="op_p" type="date" value="${o.prox?new Date(o.prox).toISOString().slice(0,10):""}"></label><div></div>
+ <label class="fl full">Notas<textarea class="f" id="op_n">${esc(o.notas||"")}</textarea></label></div>
+ <div class="row" style="margin-top:12px">${canW()?`<button class="btn pri" data-a="saveOpp" data-id="${esc(id||"")}">Guardar</button>`:""}${o.tel?`<a class="btn wa" target="_blank" rel="noopener" href="${waLink(o.tel,"Hola "+(o.contacto||"")+", le escribe Office Automation.")}">WhatsApp</a>`:""}</div></div>`,L=>bindCommon(L))}
+
+/* ===================== arranque ===================== */
+function gate(html){S.gateOk=false;$("#nav").innerHTML="";$("#mnav").innerHTML="";$("#main").innerHTML=`<div class="gate">${html}</div>`}
+function decideRole(){
+  const u=S.usuarios[S.me?.id];S.rol=S.owner?"admin":(u?.rol||null);
+  if(!S.rol){gate(`<div class="iso" style="justify-content:center;display:inline-grid;margin-bottom:14px"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:var(--k)"></i></div><h1 style="margin:0 0 8px">Te damos acceso en un momento</h1><p class="muted">Entraste como <code>${esc(S.me?.id||"")}</code>. Pídele a Toni que te asigne tu rol en OA 360; cuando lo haga, esta pantalla se abre sola.</p><p><button class="btn" onclick="logout()">Salir</button></p>`);return false}
+  S.gateOk=true;return true;
+}
+function listen(path,map,lim=1000){db.collection(path).limit(lim).onSnapshot(s=>{map.clear();s.docs.forEach(d=>map.set(d.id,{...d.data(),_id:d.id}));S.ready[path]=true;if(S.gateOk)later()},e=>{console.warn(path,e)})}
+
+/* ===================== Supabase: adaptador de datos ===================== */
+let sb=null;
+const fotoUrl=p=>/^https?:/.test(p)?p:sb.storage.from("fotos").getPublicUrl(p).data.publicUrl;
+function mkDb(){
+  const subs=new Set();
+  const ch=sb.channel("docs-rt").on("postgres_changes",{event:"*",schema:"public",table:"docs"},pl=>{const r=pl.new&&pl.new.col?pl.new:pl.old;subs.forEach(f=>f(pl.eventType,r,pl.new))}).subscribe();
+  const snapDoc=(id,data)=>({id,exists:!!data,data:()=>data||undefined});
+  async function fetchCol(col){let out=[],from=0;for(;;){const {data,error}=await sb.from("docs").select("id,data").eq("col",col).range(from,from+999);if(error)throw error;out=out.concat(data);if(data.length<1000)break;from+=1000}return out}
+  const doc=path=>{const [col,id]=path.split("/");return{
+    async get(){const {data,error}=await sb.from("docs").select("data").eq("col",col).eq("id",id).maybeSingle();if(error)throw error;return snapDoc(id,data?.data)},
+    async set(d){const {error}=await sb.from("docs").upsert({col,id,data:d,updated_at:new Date().toISOString()});if(error)throw error},
+    async update(p){const {error}=await sb.rpc("doc_merge",{p_col:col,p_id:id,p_patch:p});if(error)throw error},
+    onSnapshot(next,err){let cur=null;this.get().then(s=>{cur=s;next(s)}).catch(e=>err&&err(e));
+      const f=(ev,r,nw)=>{if(!r||r.col!==col||r.id!==id)return;next(snapDoc(id,ev==="DELETE"?null:nw.data))};subs.add(f);return()=>subs.delete(f)}}};
+  const collection=col=>{const q={limit:()=>q,
+    onSnapshot(next,err){const m=new Map();const emit=()=>next({docs:[...m.entries()].map(([id,d])=>snapDoc(id,d)),size:m.size,empty:!m.size});
+      fetchCol(col).then(rows=>{rows.forEach(r=>m.set(r.id,r.data));emit()}).catch(e=>err&&err(e));
+      let t=null;const f=(ev,r,nw)=>{if(!r||r.col!==col)return;if(ev==="DELETE")m.delete(r.id);else m.set(nw.id,nw.data);clearTimeout(t);t=setTimeout(emit,120)};subs.add(f);return()=>subs.delete(f)}};return q};
+  return{doc,collection};
+}
+window.logout=async()=>{await sb.auth.signOut();location.reload()};
+function loginScreen(msg){gate(`<div class="iso" style="display:inline-grid;margin-bottom:14px"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:var(--k)"></i></div><h1 style="margin:0 0 6px">OA 360</h1><p class="muted">Sistema interno de Office Automation. Escribe tu correo y te enviamos un enlace para entrar.</p>
+  <div class="row" style="justify-content:center;margin-top:16px"><input class="f" id="lg_e" type="email" placeholder="tu@officeautomation.com.mx" style="min-width:260px"><button class="btn pri" id="lg_b">Enviarme el enlace</button></div><p class="sm" id="lg_m" style="margin-top:12px">${esc(msg||"")}</p>`);
+  const go=async()=>{const e=$("#lg_e").value.trim().toLowerCase();if(!e)return;$("#lg_b").disabled=true;
+    const {error}=await sb.auth.signInWithOtp({email:e,options:{shouldCreateUser:false,emailRedirectTo:location.origin+location.pathname}});
+    $("#lg_m").textContent=error?"No pudimos enviarte el enlace. Revisa el correo o pide a Toni que te invite.":"Listo: revisa tu correo y abre el enlace desde este mismo dispositivo.";$("#lg_b").disabled=false};
+  $("#lg_b").onclick=go;$("#lg_e").addEventListener("keydown",e=>{if(e.key==="Enter")go()})}
+async function start(session){
+  const email=(session.user.email||"").toLowerCase();
+  S.me={id:email,name:email.split("@")[0],isOwner:(window.OA_CONFIG.ADMINS||[]).map(x=>x.toLowerCase()).includes(email)};S.owner=S.me.isOwner;S.canWrite=true;
+  db=mkDb();
+  db.doc("config/usuarios").onSnapshot(s=>{S.usuarios=(s.exists&&s.data().u)||{};if(decideRole()){const u=S.usuarios[S.me.id];if(u?.alias)S.me.name=u.alias;$("#who").innerHTML=`<b>${esc(u?.alias||S.me.name)}</b>${esc(ROLES[S.rol]||"")}<div><a href="#" onclick="logout();return false" style="color:#8FA3BD;font-size:12.5px">Salir</a></div>`;render()}});
+  db.doc("config/toner").onSnapshot(s=>{S.toner=(s.exists&&s.data().items)||[];if(S.gateOk)later()});
+  listen("clientes",S.clientes);listen("equipos",S.equipos);listen("tickets",S.tickets);listen("oportunidades",S.opps);listen("solicitudes",S.sol);listen("inventario",S.inv);
+}
+(async()=>{
+  const C=window.OA_CONFIG||{};
+  if(!C.SUPABASE_URL||C.SUPABASE_URL.includes("PEGA")){gate(`<h1>Falta configurar</h1><p class="muted">Edita <code>config.js</code> con la URL y la clave pública de Supabase.</p>`);return}
+  sb=supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY);
+  const {data:{session}}=await sb.auth.getSession();
+  if(session)start(session);else loginScreen();
+  sb.auth.onAuthStateChange((ev,ses)=>{if(ev==="SIGNED_IN"&&ses&&!S.me)start(ses)});
+})();
+</script>
+</body>
+</html>

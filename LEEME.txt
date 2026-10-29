@@ -1,0 +1,18 @@
+OA 360 · Sistema integral de Office Automation
+================================================
+
+Qué hay en esta carpeta (esto SÍ va a GitHub):
+  index.html          El sistema completo (clientes, equipos, servicio técnico, tóner, comercial...).
+  reportar.html       Portal público para que el cliente reporte una falla o pida tóner.
+  config.js           Aquí se pegan la URL y la clave pública de Supabase.
+  .nojekyll           Archivo vacío que necesita GitHub Pages. No borrar.
+  supabase/01_esquema.sql   Crea la base de datos (se ejecuta una vez en Supabase).
+
+Los datos reales de clientes y equipos vienen en otro archivo aparte
+(OA360_datos_PRIVADO.zip). NUNCA se suben a GitHub: el repositorio es público.
+
+Direcciones cuando esté publicado:
+  Sistema:  https://USUARIO.github.io/oa360/
+  Portal:   https://USUARIO.github.io/oa360/reportar.html
+
+Pasos completos: ver OA360_Como_publicarlo.pdf

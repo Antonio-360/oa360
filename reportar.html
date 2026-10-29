@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reportar falla o pedir tóner · Office Automation</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<style>
+:root{--navy:#16263D;--blue:#1B5E96;--teal:#3AAFC9;--bg:#F3F6F9;--surface:#fff;--line:#DDE3EA;--ink:#16263D;--muted:#5B6B7F;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0E1826;--surface:#16233A;--line:#26364F;--ink:#E7EDF5;--muted:#9AA9BC;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Archivo,Arial,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+header{background:var(--navy);color:#fff;padding:22px 20px}
+.w{max-width:560px;margin:0 auto}
+.iso{display:inline-grid;grid-template-columns:10px 10px;gap:2px;vertical-align:middle;margin-right:10px}.iso i{width:10px;height:10px}
+h1{font-size:26px;margin:14px 0 4px;font-weight:800}header p{margin:0;color:#C9D3DF}
+main{padding:22px 20px 50px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.seg button{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px;font:inherit;font-weight:600;color:inherit;cursor:pointer}
+.seg button.on{border-color:var(--blue);background:var(--blue);color:#fff}
+label{display:block;font-size:14px;font-weight:600;color:var(--muted);margin:14px 0 5px}
+input,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px;font:inherit;background:var(--surface);color:var(--ink)}
+textarea{min-height:110px}
+button.go{margin-top:20px;width:100%;background:var(--blue);color:#fff;border:0;border-radius:12px;padding:15px;font:inherit;font-weight:700;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.ok{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;text-align:center}
+.ok b{font-size:28px;display:block;margin:6px 0}
+.small{font-size:13.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header><div class="w"><span class="iso"><i style="background:#00AEEF"></i><i style="background:#EC008C"></i><i style="background:#FFD400"></i><i style="background:#000"></i></span><b>OFFICE AUTOMATION</b>
+<h1>¿Cómo te ayudamos?</h1><p>Si reportas antes de la 1 de la tarde, el técnico va ese mismo día.</p></div></header>
+<main class="w" id="m">
+  <div class="seg"><button class="on" data-t="falla">Reportar una falla</button><button data-t="toner">Pedir tóner</button></div>
+  <label for="emp">Empresa</label><input id="emp" autocomplete="organization">
+  <label for="nom">Tu nombre</label><input id="nom" autocomplete="name">
+  <label for="con">WhatsApp o correo</label><input id="con" autocomplete="email">
+  <label for="ser">Número de serie del equipo <span class="small">(etiqueta en la parte trasera o en la hoja de contador)</span></label><input id="ser" autocomplete="off">
+  <label for="des" id="desl">¿Qué le pasa al equipo?</label><textarea id="des"></textarea>
+  <button class="go" id="go">Enviar reporte</button>
+  <p class="small" id="msg"></p>
+  <p class="small">Al enviar aceptas el <a href="https://officeautomation.com.mx/aviso-de-privacidad" target="_blank" rel="noopener">aviso de privacidad</a>. También nos encuentras en WhatsApp 56 2760 6710.</p>
+</main>
+<script>
+let tipo="falla";
+const TZ=-6*3600e3,cd=t=>new Date(t+TZ);
+function compromiso(t){const d=cd(t),y=d.getUTCFullYear(),mo=d.getUTCMonth(),da=d.getUTCDate(),h=d.getUTCHours(),w=d.getUTCDay();const mk=(y,m,d,hh)=>Date.UTC(y,m,d,hh)-TZ;if(w>=1&&w<=5&&h<13)return mk(y,mo,da,18);let x=new Date(Date.UTC(y,mo,da));do{x=new Date(x.getTime()+864e5)}while(x.getUTCDay()%6===0);return mk(x.getUTCFullYear(),x.getUTCMonth(),x.getUTCDate(),12)}
+document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{tipo=b.dataset.t;document.querySelectorAll("[data-t]").forEach(x=>x.classList.toggle("on",x===b));
+  document.getElementById("desl").textContent=tipo==="toner"?"¿Qué tóner necesitas? (modelo o color y cantidad)":"¿Qué le pasa al equipo?";document.getElementById("go").textContent=tipo==="toner"?"Enviar pedido de tóner":"Enviar reporte"});
+const C=window.OA_CONFIG||{};const sb=supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY);
+document.getElementById("go").onclick=async()=>{const v=id=>document.getElementById(id).value.trim();const msg=document.getElementById("msg");
+  if(v("emp").length<2||v("con").length<5||v("des").length<3){msg.textContent="Escribe la empresa, un WhatsApp o correo y la descripción.";return}
+  const b=document.getElementById("go");b.disabled=true;msg.textContent="Enviando…";
+  const {data,error}=await sb.rpc("portal_reporte",{p_tipo:tipo,p_empresa:v("emp"),p_nombre:v("nom"),p_contacto:v("con"),p_serie:v("ser"),p_desc:v("des"),p_compromiso:compromiso(Date.now())});
+  if(error){b.disabled=false;msg.textContent="No se pudo enviar. Escríbenos por WhatsApp al 56 2760 6710.";return}
+  document.getElementById("m").innerHTML=`<div class="ok">Recibimos tu ${tipo==="toner"?"pedido":"reporte"}. Tu folio es<b></b><p class="small">Te contactaremos por el medio que nos dejaste. Guarda el folio por si necesitas darle seguimiento.</p></div>`;document.querySelector(".ok b").textContent=data};
+</script>
+</body>
+</html>
