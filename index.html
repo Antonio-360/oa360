@@ -393,7 +393,7 @@ function vToner(){
 }
 function vComercial(){
   const O=[...S.opps.values()];
-  return header("Embudo comercial",`${O.filter(o=>!["ganado","perdido"].includes(o.etapa)).length} oportunidades abiertas. La base de 41,094 prospectos sigue en el CRM de llamadas.`,`${canW()?`<button class="btn pri" data-a="nuevaOpp">+ Nueva oportunidad</button>`:""}<a class="btn" href="https://claude.ai/artifact/AwoMHTGmiECe1uQSkQ9sKm" target="_blank" rel="noopener">Abrir CRM de prospectos</a>`)+
+  return header("Embudo comercial",`${O.filter(o=>!["ganado","perdido"].includes(o.etapa)).length} oportunidades abiertas. Las empresas de Prospectos llegan aquí solas al pasar a cita o propuesta.`,`${canW()?`<button class="btn pri" data-a="nuevaOpp">+ Nueva oportunidad</button>`:""}<a class="btn" href="#prospectos">Ir a Prospectos</a>`)+
   `<div class="board" data-board="opp">${ETAPAS.map(([k,n])=>{const it=O.filter(o=>o.etapa===k);const v=it.reduce((s,o)=>s+(+o.valor||0),0);return `<div class="col" data-col="${k}"><h3>${n}<span>${it.length}${v?" · "+money(v):""}</span></h3>${it.map(o=>`<div class="card" draggable="true" data-opp="${esc(o._id)}"><div class="t">${esc(o.empresa)}</div><div class="muted sm">${esc(o.tipo||"")}${o.equipos?" · "+esc(o.equipos)+" equipos":""}</div>${o.valor?`<div class="b">${money(o.valor)}/mes</div>`:""}${o.prox?`<div class="sm ${o.prox<Date.now()?"":"muted"}" style="${o.prox<Date.now()?"color:var(--bad)":""}">Seguimiento ${fd(o.prox)}</div>`:""}</div>`).join("")}</div>`}).join("")}</div>`;
 }
 function vMensajes(){
@@ -916,13 +916,15 @@ function pHoy(){
      ${meta?`<div class="meter"><i style="width:${Math.min(100,Math.round(100*n/meta))}%"></i></div><div class="muted sm" style="margin-top:6px">${n>=meta?"Meta del día cumplida":"Faltan "+falta+" para la meta"}</div>`:`<div class="muted sm">Sin meta de llamadas en frío: seguimientos y clientes.</div>`}</div></div>
    ${agendaP(me,H)}
    <div class="grid g2" style="margin-top:16px;align-items:start">
-    <div class="panel"><h2>1 · Seguimientos de hoy <span class="muted sm">${H.nseg}</span></h2>${lista(H.seg,"Nada vencido. Al registrar un contacto pon la fecha del próximo seguimiento y aparecerá aquí ese día.",l=>fila(l,true))}</div>
-    ${frio?`<div class="panel"><h2>2 · Nuevos por llamar <span class="muted sm">${fmt(H.nnuevos)}</span></h2>
+    <div style="display:grid;gap:16px;min-width:0"><div class="panel"><h2>1 · Seguimientos de hoy <span class="muted sm">${H.nseg}</span></h2>${lista(H.seg,"Nada vencido. Al registrar un contacto pon la fecha del próximo seguimiento y aparecerá aquí ese día.",l=>fila(l,true))}</div>
+     ${frio?`<div class="panel"><h2>2 · Empresas en proceso <span class="muted sm">${H.proceso.length} con interés, cita o propuesta</span></h2>${lista(H.proceso,"Cuando una empresa muestre interés o agende cita aparecerá aquí para darle seguimiento y cotizarla.",l=>fila(l,true))}</div>`:""}</div>
+    ${frio?`<div class="panel"><h2>3 · Nuevos por llamar <span class="muted sm">${fmt(H.nnuevos)}</span></h2>
       ${H.nnuevos<Math.max(falta,1)?`<div class="bulkp"><b>Tomar empresas de</b><select class="f" data-pcola>${COLAS.map(([k,l])=>`<option value="${k}" ${k===PR.cola?"selected":""}>${esc(l)}</option>`).join("")}</select>
         <button class="btn sm pri" data-pa="tomar" ${libres?"":"disabled"}>Tomar ${Math.min(Math.max(falta-H.nnuevos,1),libres||0)}</button><span class="muted sm">${libres===undefined?"contando…":fmt(libres||0)+" libres con teléfono"}</span></div>`:""}
       ${lista(H.nuevos.slice(0,Math.max(falta,10)),"No tienes empresas asignadas sin contactar. Toma un bloque de la cola de arriba.",l=>fila(l))}</div>`
-    :`<div class="panel"><h2>2 · Empresas en proceso <span class="muted sm">${H.proceso.length}</span></h2>${lista(H.proceso,"Aquí aparecen las empresas con interés, cita o propuesta que te pasan.",l=>fila(l,true))}</div>`}
+    :`<div class="panel"><h2>2 · Empresas en proceso <span class="muted sm">${H.proceso.length}</span></h2>${lista(H.proceso,"Aquí aparecen tus empresas con interés, cita o propuesta: referidos, conocidos y las que te pasan.",l=>fila(l,true))}</div>`}
    </div>
+
    <div class="panel" style="margin-top:16px"><h2>Hecho hoy <span class="muted sm">${n} empresas</span></h2>${lista(H.hechos,"Aún no registras contactos hoy.",l=>fila(l,false,true))}</div>`;
 }
 function agendaP(me,H){
@@ -1010,8 +1012,9 @@ function pEquipo(){
   ${adm?`<div class="panel" style="margin-top:16px"><h2>Importar base de prospectos</h2><p class="muted sm" style="margin-top:0">Elige el archivo <b>OA360_prospectos_PRIVADO.json</b>. Solo agrega empresas nuevas: nunca borra ni pisa el seguimiento que ya exista. También carga el equipo, las metas y las rutinas del CRM anterior si aquí aún no hay.</p>
    <div class="row"><input type="file" id="pimp" accept=".json,application/json"><button class="btn pri" data-pa="importar">Importar</button></div><div class="muted sm" id="pimp_m" style="margin-top:8px"></div></div>`:""}
   <div class="panel" style="margin-top:16px"><h2>Cómo trabajar los prospectos</h2><ol class="sm" style="margin:0;padding-left:18px;line-height:1.7">
-   <li>Llamadas en frío (Madelein): en <b>Hoy</b> toma un bloque de empresas con teléfono de la cola y trabaja primero los seguimientos vencidos. Cuando una empresa muestra interés o agenda cita, cambia el responsable en su ficha para pasarla a quien la cierra.</li>
-   <li>El resto del equipo ve en <b>Hoy</b> sus seguimientos y sus empresas en conversación, cita o propuesta.</li>
+   <li>Madelein hace las llamadas en frío: en <b>Hoy</b> toma un bloque de empresas con teléfono de la cola y trabaja primero los seguimientos vencidos. Las que muestran interés o agendan cita las sigue atendiendo ella y les hace la cotización.</li>
+   <li>Si una empresa se interesa en <b>seminuevos o refacciones</b>, cambia el responsable en su ficha a Toni. Toni da de alta con <b>+ Empresa</b> sus referidos y conocidos.</li>
+   <li>Cada persona ve en <b>Hoy</b> sus seguimientos y sus empresas en conversación, cita o propuesta.</li>
    <li>Después de cada llamada, WhatsApp o correo pulsa <b>Registrar</b>: canal, resultado, nota y fecha del próximo seguimiento.</li>
    <li>Cuando una empresa llega a <b>diagnóstico o propuesta</b>, pasa sola al embudo de <b>Comercial</b>. Desde su ficha puedes crear la <b>cotización</b> y, al ganarla, <b>convertirla en cliente</b>.</li>
    <li>Cuando salga una campaña de mailing, en <b>Empresas</b> filtra la oleada y usa <b>Registrar campaña de correo</b>.</li></ol></div>`;
@@ -1059,7 +1062,7 @@ function bindFicha(L){const l=PR.ficha;
 async function syncOpp(l){ // integra con el embudo de Comercial cuando la empresa llega a diagnóstico o más
   if(RANKP[l.estado]<3&&!["perdido"].includes(l.estado))return;const id="p-"+l.id,o=S.opps.get(id);if(!o&&l.estado==="perdido")return;
   const etapa={diagnostico:"diagnostico",propuesta:"propuesta",ganado:"ganado",perdido:"perdido"}[l.estado];
-  const d={...(o||{creado:Date.now(),tipo:"Renta de impresión",valor:0,equipos:0,notas:"Desde Prospectos"}),empresa:l.empresa,contacto:l.contacto?.contacto||o?.contacto||"",tel:telP(l),etapa,resp:l.resp||S.me.id,prospectoId:l.id,prox:l.prox?new Date(l.prox+"T12:00:00").getTime():o?.prox||null};delete d._id;
+  const d={...(o||{creado:Date.now(),tipo:l.lista==="usados"?"Venta de seminuevo":"Renta de impresión",valor:0,equipos:0,notas:"Desde Prospectos"}),empresa:l.empresa,contacto:l.contacto?.contacto||o?.contacto||"",tel:telP(l),etapa,resp:l.resp||S.me.id,prospectoId:l.id,prox:l.prox?new Date(l.prox+"T12:00:00").getTime():o?.prox||null};delete d._id;
   await save("oportunidades/"+id,d,o?null:"Pasó al embudo de Comercial")}
 Object.assign(A,{
  async registrar(_,L){syncPD(L);const l=PR.ficha;if(!PD.r){toast("Elige el resultado del contacto");return}
@@ -1081,9 +1084,9 @@ Object.assign(A,{
   <div class="panel"><div class="form"><label class="fl full">Nombre de la campaña<input class="f" id="pc_n" value="Oleada 1 · Diagnóstico gratuito"></label><label class="fl">Plantilla / correo<input class="f" id="pc_t" placeholder="Ej. E-A1"></label><label class="fl">Próximo seguimiento (opcional)<input class="f" type="date" id="pc_p" value="${addD(hoyP(),4)}"></label>
   <label class="fl full row" style="flex-direction:row;align-items:center"><input type="checkbox" id="pc_s" checked> Saltar las que ya se contactaron antes</label></div><div class="row" style="margin-top:12px"><button class="btn pri" data-a="campanaGo">Registrar envío</button></div></div>`,L=>{bindCommon(L);PR.campP=p})},
  async campanaGo(_,L){try{const n=await rpc("prosp_campana",{p:PR.campP,p_nombre:val(L,"#pc_n")||"Campaña de correo",p_plantilla:val(L,"#pc_t"),p_prox:val(L,"#pc_p")||null,p_saltar:L.querySelector("#pc_s").checked});closeDr();toast(n?`Campaña registrada: ${fmt(n)} empresas`:"No hay empresas nuevas que registrar");pflush("list","res")}catch(e){}render()},
- nueva(){drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>Nueva empresa</h2><p class="muted">Para prospectos que no están en la base del DENUE (referidos, clientes perdidos, etc.). Queda a tu nombre.</p><div class="panel"><div class="form">
+ nueva(){drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>Nueva empresa</h2><p class="muted">Para prospectos que no están en la base del DENUE: referidos, conocidos, clientes perdidos o interesados en seminuevos y refacciones. Queda a tu nombre.</p><div class="panel"><div class="form">
   <label class="fl full">Empresa<input class="f" id="pn_e"></label><label class="fl">Persona de contacto<input class="f" id="pn_c"></label><label class="fl">Cargo<input class="f" id="pn_ca"></label><label class="fl">Teléfono<input class="f" id="pn_t" inputmode="tel"></label><label class="fl">Correo<input class="f" id="pn_m" type="email"></label>
-  <label class="fl">Municipio<input class="f" id="pn_mu"></label><label class="fl">Lista<select class="f" id="pn_l">${Object.entries(LISTAS_P).filter(([k])=>k!=="renta"&&k!=="usados").map(([k,n])=>`<option value="${k}" ${k==="manual"?"selected":""}>${n}</option>`).join("")}</select></label>
+  <label class="fl">Municipio<input class="f" id="pn_mu"></label><label class="fl">Lista<select class="f" id="pn_l">${Object.entries(LISTAS_P).filter(([k])=>k!=="renta").map(([k,n])=>`<option value="${k}" ${k==="manual"?"selected":""}>${n}</option>`).join("")}</select></label>
   <label class="fl full">Notas<textarea class="f" id="pn_n"></textarea></label></div><div class="row" style="margin-top:12px"><button class="btn pri" data-a="nuevaGo">Crear empresa</button></div></div>`,L=>bindCommon(L))},
  async nuevaGo(_,L){const e=val(L,"#pn_e");if(!e){toast("Escribe el nombre de la empresa");return}
   try{const l=await rpc("prosp_nueva",{p:{empresa:e,tel:val(L,"#pn_t"),email:val(L,"#pn_m"),mun:val(L,"#pn_mu"),lista:val(L,"#pn_l"),notas:val(L,"#pn_n"),contacto:{contacto:val(L,"#pn_c"),cargo:val(L,"#pn_ca")}}});pflush();openProsp(l.id)}catch(e){}},
