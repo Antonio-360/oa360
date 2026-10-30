@@ -142,6 +142,10 @@ canvas.sig{width:100%;height:170px;background:#fff;border:1px dashed var(--muted
 .pst{display:flex;flex-direction:column-reverse;min-height:1px;border-radius:3px 3px 0 0;overflow:hidden;background:var(--soft)}.pst i{display:block;min-height:1px}.pbw small{font-size:9.5px;color:var(--muted);text-align:center;white-space:nowrap;height:14px}
 .frow{display:grid;grid-template-columns:130px 1fr 90px;gap:10px;align-items:center;margin:9px 0}.ftr{height:24px;background:var(--soft);border-radius:4px;position:relative}.ftr div{height:100%;border-radius:4px}.ftr b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
 .pev{display:grid;grid-template-columns:14px 1fr;gap:8px;padding:8px 0;border-top:1px dashed var(--line)}.pev:first-of-type{border-top:0}.pev .cdot{margin-top:4px}
+
+/* venta */
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:12px}
+.vcard{cursor:pointer;display:grid;gap:3px}.vimg{aspect-ratio:4/3;max-width:100%;border-radius:8px;background:var(--soft);display:grid;place-items:center;overflow:hidden;margin-bottom:6px}.vimg img{width:100%;height:100%;object-fit:cover}
 </style>
 </head>
 <body>
@@ -169,7 +173,7 @@ const TZ=-6*3600e3; // CDMX sin horario de verano
 const cdmx=t=>new Date((t??Date.now())+TZ); // usar getUTC*
 const fdt=t=>{if(!t)return"—";const d=cdmx(t);return d.getUTCDate()+" "+MESES[d.getUTCMonth()]+" "+String(d.getUTCHours()).padStart(2,"0")+":"+String(d.getUTCMinutes()).padStart(2,"0")};
 const fd=t=>{if(!t)return"—";const d=cdmx(t);return d.getUTCDate()+" "+MESES[d.getUTCMonth()]+" "+d.getUTCFullYear()};
-function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2600)}
+function toast(t){document.querySelectorAll(".toast").forEach(x=>x.remove());const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2600)}
 const ICON={
  inicio:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
  servicio:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
@@ -180,6 +184,7 @@ const ICON={
  toner:'<path d="M7 3h10v4l2 3v11H5V10l2-3z"/><path d="M5 13h14"/>',
  comercial:'<path d="M3 4h18l-7 9v6l-4 2v-8z"/>',
  prospectos:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
+ venta:'<path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
  cotiz:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
  mensajes:'<path d="M4 5h16v11H8l-4 4z"/>',
  config:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'
@@ -187,7 +192,7 @@ const ICON={
 const svg=n=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]||""}</svg>`;
 
 /* ===================== estado ===================== */
-const S={clientes:new Map(),cot:new Map(),empresa:{},tareas:new Map(),crm:null,crmHechos:{},equipos:new Map(),tickets:new Map(),opps:new Map(),sol:new Map(),inv:new Map(),
+const S={clientes:new Map(),cot:new Map(),venta:new Map(),consultas:new Map(),empresa:{},tareas:new Map(),crm:null,crmHechos:{},equipos:new Map(),tickets:new Map(),opps:new Map(),sol:new Map(),inv:new Map(),
   usuarios:{},toner:[],contadores:{},me:null,rol:null,owner:false,canWrite:true,ready:{},filters:{}};
 let db=null;
 const ROLES={admin:"Administración",direccion:"Dirección",comercial:"Comercial",atencion:"Atención a clientes",jefe_tecnico:"Jefe técnico",tecnico:"Técnico"};
@@ -207,7 +212,7 @@ const PLANTILLAS=[
 ];
 const canW=()=>S.canWrite!==false;
 const can=a=>{const r=S.rol;if(S.owner||r==="admin")return true;
-  const M={servicio:["direccion","atencion","jefe_tecnico","comercial"],asignar:["jefe_tecnico","atencion","direccion"],comercial:["comercial","direccion","atencion"],toner:["jefe_tecnico","atencion","direccion"],config:[],clientes:["direccion","comercial","atencion","jefe_tecnico"],equipos:["direccion","comercial","atencion","jefe_tecnico"]};
+  const M={servicio:["direccion","atencion","jefe_tecnico","comercial"],asignar:["jefe_tecnico","atencion","direccion"],comercial:["comercial","direccion","atencion"],venta:["direccion","jefe_tecnico","comercial","atencion"],toner:["jefe_tecnico","atencion","direccion"],config:[],clientes:["direccion","comercial","atencion","jefe_tecnico"],equipos:["direccion","comercial","atencion","jefe_tecnico"]};
   return (M[a]||[]).includes(r)};
 
 /* ===================== datos derivados ===================== */
@@ -252,6 +257,7 @@ const VIEWS=[
  {id:"prospectos",n:"Prospectos",ok:()=>can("comercial")},
  {id:"comercial",n:"Comercial",ok:()=>can("comercial")},
  {id:"cotiz",n:"Cotizaciones",ok:()=>can("comercial")},
+ {id:"venta",n:"Venta",ok:()=>can("venta")},
  {id:"mensajes",n:"Mensajes",ok:()=>can("servicio")},
  {id:"config",n:"Equipo y accesos",ok:()=>S.owner||S.rol==="admin"}
 ];
@@ -259,15 +265,15 @@ const cur=()=>{const h=(location.hash||"").slice(1);return VIEWS.find(v=>v.id===
 function renderNav(){
   const vs=VIEWS.filter(v=>v.ok());const c=cur();
   const abiertos=[...S.tickets.values()].filter(t=>t.estado!=="cerrado").length;
-  const mine=misTickets().length;
-  $("#nav").innerHTML=vs.map(v=>`<a href="#${v.id}" class="${v.id===c?"on":""}">${svg(v.id)}${v.n}${v.id==="servicio"&&abiertos?`<span class="n">${abiertos}</span>`:""}${v.id==="midia"&&mine?`<span class="n">${mine}</span>`:""}</a>`).join("");
-  const mob=S.rol==="tecnico"?["midia","equipos"]:["inicio","servicio","clientes","prospectos","comercial"];
+  const mine=misTickets().length;const vpend=vPendientes();
+  $("#nav").innerHTML=vs.map(v=>`<a href="#${v.id}" class="${v.id===c?"on":""}">${svg(v.id)}${v.n}${v.id==="servicio"&&abiertos?`<span class="n">${abiertos}</span>`:""}${v.id==="midia"&&mine?`<span class="n">${mine}</span>`:""}${v.id==="venta"&&vpend?`<span class="n">${vpend}</span>`:""}</a>`).join("");
+  const mob=S.rol==="tecnico"?["midia","equipos"]:S.rol==="jefe_tecnico"?["midia","servicio","equipos","venta","toner"]:["inicio","servicio","clientes","prospectos","venta","comercial"];
   $("#mnav").innerHTML=vs.filter(v=>mob.includes(v.id)).map(v=>`<a href="#${v.id}" class="${v.id===c?"on":""}">${svg(v.id)}${v.n.split(" ")[0]}</a>`).join("");
 }
 function render(){
   if(!S.gateOk){return}
   renderNav();
-  const c=cur();const fn={inicio:vInicio,midia:vMiDia,servicio:vServicio,preventivos:vPrev,clientes:vClientes,equipos:vEquipos,toner:vToner,comercial:vComercial,cotiz:vCotiz,prospectos:vProspectos,mensajes:vMensajes,config:vConfig}[c];
+  const c=cur();const fn={inicio:vInicio,midia:vMiDia,servicio:vServicio,preventivos:vPrev,clientes:vClientes,equipos:vEquipos,toner:vToner,comercial:vComercial,cotiz:vCotiz,prospectos:vProspectos,venta:vVenta,mensajes:vMensajes,config:vConfig}[c];
   const m=$("#main");const st=m.scrollTop;m.innerHTML=fn();m.scrollTop=st;bindView(c);
 }
 window.addEventListener("hashchange",()=>{$("#main").scrollTop=0;render()});
@@ -333,7 +339,9 @@ function vServicio(){
 }
 function vMiDia(){
   const T=misTickets().sort((a,b)=>(a.compromiso||0)-(b.compromiso||0));
-  return header("Mi día",T.length?`${T.length} servicio${T.length>1?"s":""} asignado${T.length>1?"s":""}.`:"No tienes servicios pendientes.")+
+  const PV=[...S.consultas.values()].filter(c=>c.estado==="lalo"&&c.paraLalo===S.me?.id).sort((a,b)=>a.tPreg-b.tPreg);
+  const pv=PV.length?`<div class="panel" style="margin-bottom:14px;border-color:var(--warn)"><h2>Preguntas de venta <span class="muted sm">${PV.length} esperando tu respuesta</span></h2>${PV.map(c=>{const a=S.venta.get(c.articuloId);return `<div class="pitem click" data-vcon="${esc(c._id)}"><div style="min-width:0"><div class="b">${a?esc(a.codigo+" · "+[a.marca,a.modelo].join(" ")):"Consulta general"}</div><div class="sm" style="white-space:pre-wrap">${esc(c.preguntaLalo||"")}</div><div class="muted sm">${esc(nombreP(c.preguntoPor))} · ${fdt(c.tPreg)} · ${esc(V_CANL[c.canal]||"")}</div></div><button class="btn sm pri">Responder</button></div>`}).join("")}</div>`:"";
+  return pv+header("Mi día",T.length?`${T.length} servicio${T.length>1?"s":""} asignado${T.length>1?"s":""}.`:"No tienes servicios pendientes.")+
    T.map(t=>{const s=slaInfo(t);const e=S.equipos.get(t.equipoId);return `<div class="tcard"><div class="row" style="justify-content:space-between"><span class="t">${esc(t.cliente)}</span><span class="chip ${s.k}">${s.txt} · ${fdt(t.compromiso)}</span></div>
    <div class="muted">${esc(t.tipo)} · ${esc(t.folio)}</div><div style="margin:6px 0">${esc(t.modelo||"")} ${t.serie?"· serie "+esc(t.serie):""}<br><span class="muted">${esc(t.ubicacion||e?.ubicacion||"")}</span></div>
    <div class="sm">${esc(t.desc||"")}</div>
@@ -686,7 +694,7 @@ function pdfArr(q){
 }
 
 /* ===================== eventos ===================== */
-function bindView(v){const m=$("#main");bindCommon(m);if(v==="prospectos")bindProsp(m);
+function bindView(v){const m=$("#main");bindCommon(m);if(v==="prospectos")bindProsp(m);if(v==="venta"||v==="midia")bindVenta(m);
   m.querySelectorAll("[data-f]").forEach(el=>{const [g,k]=el.dataset.f.split(".");const h=()=>{S.filters[g]={...(S.filters[g]||{}),[k]:el.type==="checkbox"?el.checked:el.value};const pos=el.selectionStart;render();const n=m.querySelector(`[data-f="${el.dataset.f}"]`);if(n&&el.tagName==="INPUT"&&el.type!=="checkbox"){n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}};el.addEventListener(el.tagName==="INPUT"&&el.type!=="checkbox"?"input":"change",h)});
   m.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{S.filters.tonTab=b.dataset.tab;render()});
   // drag & drop
@@ -1134,6 +1142,212 @@ function pdfInformeP(R,a,b){
   y+=6;cell(d,14,y,188,6,"Equipo",{fill:BAR,b:1,a:"c"});y+=6;Object.entries(R.equipo||{}).forEach(([p,v])=>{cell(d,14,y,90,6,nombreP(p));cell(d,104,y,32,6,fmt(v.n)+" contactos",{a:"c",s:7.5});cell(d,136,y,33,6,fmt(v.emp)+" empresas",{a:"c",s:7.5});cell(d,169,y,33,6,fmt(v.pos)+" positivas",{a:"c",s:7.5});y+=6});
   d.setFontSize(7.5);d.setTextColor(90);d.text("OA 360 · Office Automation · generado el "+fFecha(Date.now()),108,268,{align:"center"});savePdf(d,`Informe_comercial_${a}_${b}.pdf`)}
 
+/* ===================== venta de seminuevos y refacciones ===================== */
+const V_TIPOS=["Impresora","Multifuncional","Computadora","Laptop","Monitor","Tóner","Refacción","Otro"];
+const V_ESTADOS=["Nuevo","Seminuevo","Usado","Reacondicionado"];
+const V_EST=[["borrador","Borrador"],["listo","Listo para publicar"],["publicado","Publicado"],["apartado","Apartado"],["vendido","Vendido"]];
+const V_ESTL=Object.fromEntries(V_EST);
+const V_CANALES=[["marketplace","Marketplace"],["facebook","Facebook"],["mercadolibre","Mercado Libre"],["whatsapp","WhatsApp"],["otro","Otro"]];
+const V_CANL=Object.fromEntries(V_CANALES);
+const V_PUB=[["marketplace","Facebook Marketplace"],["facebook","Página de Facebook"],["mercadolibre","Mercado Libre"]];
+const C_EST=[["nueva","Nueva"],["lalo","Esperando respuesta técnica"],["respondida","Respondida: contestar al comprador"],["seguimiento","En seguimiento"],["venta","Vendido"],["sin_venta","Sin venta"]];
+const C_ESTL=Object.fromEntries(C_EST);
+const VE={tab:"catalogo",f:{},fm:{}};
+const vChip=e=>`<span class="chip ${e==="vendido"?"ok":e==="apartado"?"warn":e==="publicado"?"blue":e==="listo"?"warn":""}">${esc(V_ESTL[e]||e)}</span>`;
+const cChip=e=>`<span class="chip ${e==="venta"?"ok":e==="sin_venta"?"":e==="lalo"?"warn":e==="respondida"?"bad":"blue"}">${esc(C_ESTL[e]||e)}</span>`;
+const tecnicosVenta=()=>Object.entries(S.usuarios).filter(([,u])=>u.rol==="jefe_tecnico").map(([id,u])=>({id,nombre:u.alias||nombreP(id)}));
+const vTitulo=a=>[a.tipo&&a.tipo!=="Otro"?a.tipo:"",a.marca,a.modelo,a.estado?a.estado.toLowerCase():""].filter(Boolean).join(" ").replace(/\s+/g," ").trim();
+function vTexto(a){const L=[];
+  L.push(`${vTitulo(a)}${a.precio?` · ${money(a.precio)} MXN`:""}`);L.push("");
+  if(a.specs)L.push("✔ "+a.specs);if(a.contador)L.push(`✔ Contador: ${fmt(a.contador)} páginas`);
+  if(a.compatible)L.push(`✔ Compatible con: ${a.compatible}`);if(a.incluye)L.push(`✔ Incluye: ${a.incluye}`);
+  if(a.garantia)L.push(`✔ Garantía: ${a.garantia}`);L.push(`✔ Estado: ${a.estado||""}${a.estado==="Seminuevo"||a.estado==="Reacondicionado"?", revisado por nuestro equipo técnico":""}`);
+  if(+a.cantidad>1)L.push(`✔ Disponibles: ${a.cantidad} piezas${a.volumen?" · precio especial por volumen":""}`);L.push("");
+  L.push(`Precio: ${money(a.precio)} MXN${a.negociable?" (negociable)":""}${a.factura!==false?" · Facturamos":""}`);
+  L.push(`Entrega en ${a.entrega||"Tlalnepantla, Edo. de México"}${a.envio?" · Envíos a todo México":""}`);
+  L.push("");L.push(`Office Automation · ${EMP().web} · WhatsApp ${EMP().waTxt}`);L.push(`Ref. ${a.codigo}`);return L.join("\n")}
+function vPendientes(){const me=S.me?.id;let n=0;S.consultas.forEach(c=>{if(c.estado==="lalo"&&c.paraLalo===me)n++;else if(S.rol!=="jefe_tecnico"&&(c.estado==="respondida"||c.estado==="nueva")&&(!c.resp||c.resp===me))n++});return n}
+function vVenta(){
+  const tabs=[["catalogo","Catálogo"],["mensajes","Mensajes de compradores"],["resultados","Resultados"]];
+  const pend=vPendientes();
+  return header("Venta","Seminuevos, impresoras y refacciones: Lalo captura los datos y el precio, Toni publica y atiende a los compradores.",canW()?`<button class="btn pri" data-a="vNuevo">+ Artículo</button><button class="btn" data-a="cNueva">+ Mensaje de comprador</button>`:"")+
+   `<div class="tabs">${tabs.map(([k,n])=>`<button class="${VE.tab===k?"on":""}" data-vtab="${k}">${n}${k==="mensajes"&&pend?` <span class="chip bad">${pend}</span>`:""}</button>`).join("")}</div>`+({catalogo:vCatalogo,mensajes:vMensajesC,resultados:vResultadosV}[VE.tab])();
+}
+function vCatalogo(){
+  const f=VE.f;let I=[...S.venta.values()];const all=I;
+  if(f.est)I=I.filter(a=>a.estatus===f.est);else I=I.filter(a=>a.estatus!=="vendido");
+  if(f.tipo)I=I.filter(a=>a.tipo===f.tipo);
+  if(f.q){const q=f.q.toLowerCase();I=I.filter(a=>[a.codigo,a.marca,a.modelo,a.tipo,a.compatible,a.specs].join(" ").toLowerCase().includes(q))}
+  I.sort((a,b)=>(a.codigo||"").localeCompare(b.codigo||""));
+  const n=e=>all.filter(a=>a.estatus===e).length;const mesIni=(()=>{const d=cdmx();return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1)-TZ})();
+  const vend=all.filter(a=>(a.ventas||[]).some(v=>v.t>=mesIni));const ing=all.reduce((s,a)=>s+(a.ventas||[]).filter(v=>v.t>=mesIni).reduce((x,v)=>x+(+v.precio||0)*(+v.cant||1),0),0);
+  const disp=all.filter(a=>!["vendido","borrador"].includes(a.estatus));const valor=disp.reduce((s,a)=>s+(+a.precio||0)*(+a.cantidad||1),0);
+  return `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+   <div class="kpi"><i class="ink" style="background:var(--y)"></i><div class="v">${n("listo")}</div><div class="l">listos para publicar</div></div>
+   <div class="kpi"><i class="ink" style="background:var(--c)"></i><div class="v">${n("publicado")}</div><div class="l">publicados</div></div>
+   <div class="kpi"><i class="ink" style="background:var(--m)"></i><div class="v">${n("apartado")}</div><div class="l">apartados</div></div>
+   <div class="kpi"><i class="ink" style="background:var(--ok)"></i><div class="v">${money(ing)}</div><div class="l">vendido este mes · ${vend.length} artículo${vend.length===1?"":"s"}</div></div>
+   <div class="kpi"><i class="ink" style="background:var(--k)"></i><div class="v">${money(valor)}</div><div class="l">inventario a la venta · ${n("borrador")} en borrador</div></div></div>
+  <div class="filters" style="margin-top:14px"><input class="f" placeholder="Buscar código, marca, modelo o compatibilidad" data-vf="q" value="${esc(f.q||"")}" style="flex:1;min-width:220px">
+   <select class="f" data-vf="est"><option value="">Disponibles (sin vendidos)</option>${V_EST.map(([k,l])=>`<option value="${k}" ${f.est===k?"selected":""}>${l}</option>`).join("")}</select>
+   <select class="f" data-vf="tipo"><option value="">Todos los tipos</option>${V_TIPOS.map(t=>`<option ${f.tipo===t?"selected":""}>${t}</option>`).join("")}</select>
+   ${canW()?`<label class="btn">Importar Excel<input type="file" id="vimp" accept=".xlsx" class="hide"></label>`:""}</div>
+  ${I.length?`<div class="vgrid">${I.map(a=>{const ft=(a.fotos||[])[0];const pubs=V_PUB.filter(([k])=>a.pub?.[k]?.url||a.pub?.[k]?.on);return `<div class="card vcard" data-vart="${esc(a._id)}">
+    <div class="vimg">${ft?`<img src="${esc(fotoUrl(ft))}" alt="${esc(vTitulo(a))}" loading="lazy">`:`<span class="muted sm">Sin fotos</span>`}</div>
+    <div class="row" style="justify-content:space-between"><span class="t">${esc(a.codigo)}</span>${vChip(a.estatus)}</div>
+    <div class="b">${esc([a.marca,a.modelo].filter(Boolean).join(" ")||"(sin modelo)")}</div><div class="muted sm">${esc(a.tipo||"")} · ${esc(a.estado||"")}${a.contador?" · "+fmt(a.contador)+" págs.":""}</div>
+    <div class="row" style="justify-content:space-between;margin-top:6px"><span class="b" style="font-size:17px">${a.precio?money(a.precio):`<span class="muted sm">sin precio</span>`}</span><span class="muted sm">${+a.cantidad>1?a.cantidad+" pzas":""}</span></div>
+    ${pubs.length?`<div class="muted sm">Publicado en ${pubs.map(([,l])=>esc(l.replace("Facebook ","").replace("Página de ",""))).join(", ")}</div>`:""}</div>`}).join("")}</div>`
+  :`<div class="panel empty">${all.length?"Ningún artículo con estos filtros.":"Aún no hay artículos. Lalo los da de alta con «+ Artículo» (modelo exacto, estado, contador, precio y fotos), o se importa el Excel de inventario."}</div>`}`;
+}
+function vMensajesC(){
+  const me=S.me.id,fm=VE.fm;let C=[...S.consultas.values()].sort((a,b)=>b.fecha-a.fecha);
+  const lalo=S.rol==="jefe_tecnico";
+  const grupos=lalo?[["lalo","Preguntas para ti",c=>c.estado==="lalo"&&c.paraLalo===me],["resto","Respondidas y cerradas",c=>c.estado!=="lalo"]]
+   :[["accion","Requieren tu atención",c=>["nueva","respondida"].includes(c.estado)],["lalo","Esperando respuesta técnica",c=>c.estado==="lalo"],["seguimiento","En seguimiento",c=>c.estado==="seguimiento"],["cerradas","Cerradas (últimos 30 días)",c=>["venta","sin_venta"].includes(c.estado)&&c.cierre>Date.now()-30*864e5]];
+  if(fm.canal)C=C.filter(c=>c.canal===fm.canal);
+  const fila=c=>{const a=S.venta.get(c.articuloId);return `<div class="pitem click" data-vcon="${esc(c._id)}"><div style="min-width:0"><div class="b">${esc(c.nombre||"Comprador")} <span class="muted sm" style="font-weight:400">· ${esc(V_CANL[c.canal]||c.canal)} · ${fdt(c.fecha)}</span></div>
+    <div class="sm">${a?`<b>${esc(a.codigo)}</b> ${esc([a.marca,a.modelo].join(" "))} · `:""}${esc((c.pregunta||"").slice(0,140))}</div>
+    ${c.estado==="respondida"&&c.respuesta?`<div class="sm" style="color:var(--ok)">Lalo: ${esc(c.respuesta.slice(0,160))}</div>`:""}</div>${cChip(c.estado)}</div>`};
+  return `<div class="filters"><select class="f" data-vfm="canal"><option value="">Todos los canales</option>${V_CANALES.map(([k,l])=>`<option value="${k}" ${fm.canal===k?"selected":""}>${l}</option>`).join("")}</select></div>
+  ${grupos.map(([k,t,fn])=>{const L=C.filter(fn);return `<div class="panel" style="margin-bottom:14px"><h2>${t} <span class="muted sm">${L.length}</span></h2>${L.map(fila).join("")||`<div class="muted sm">${k==="accion"?"Nada pendiente. Registra cada mensaje de Marketplace, Facebook o Mercado Libre con «+ Mensaje de comprador».":"—"}</div>`}</div>`}).join("")}`;
+}
+function vResultadosV(){
+  const d30=Date.now()-30*864e5,C=[...S.consultas.values()].filter(c=>c.fecha>=d30);
+  const por=V_CANALES.map(([k,l])=>{const L=C.filter(c=>c.canal===k);return{l,n:L.length,v:L.filter(c=>c.estado==="venta").length}}).filter(x=>x.n);
+  const resp=C.filter(c=>c.tPreg&&c.tResp).map(c=>c.tResp-c.tPreg);const prom=resp.length?resp.reduce((s,x)=>s+x,0)/resp.length:0;
+  const vendidos=[...S.venta.values()].flatMap(a=>(a.ventas||[]).filter(v=>v.t>=d30).map(v=>({...v,a})));
+  return `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+   <div class="kpi"><i class="ink" style="background:var(--c)"></i><div class="v">${C.length}</div><div class="l">mensajes en 30 días</div></div>
+   <div class="kpi"><i class="ink" style="background:var(--ok)"></i><div class="v">${C.filter(c=>c.estado==="venta").length}</div><div class="l">terminaron en venta · ${C.length?Math.round(100*C.filter(c=>c.estado==="venta").length/C.length):0}%</div></div>
+   <div class="kpi"><i class="ink" style="background:var(--m)"></i><div class="v">${resp.length?(prom<3600e3?Math.round(prom/60e3)+" min":(prom/3600e3).toFixed(1)+" h"):"—"}</div><div class="l">respuesta técnica promedio</div></div>
+   <div class="kpi"><i class="ink" style="background:var(--y)"></i><div class="v">${money(vendidos.reduce((s,v)=>s+(+v.precio||0)*(+v.cant||1),0))}</div><div class="l">vendido en 30 días</div></div></div>
+  <div class="grid g2" style="margin-top:16px;align-items:start"><div class="panel"><h2>Mensajes por canal</h2><table class="tbl"><tr><th>Canal</th><th>Mensajes</th><th>Ventas</th><th>Conversión</th></tr>${por.map(x=>`<tr><td>${esc(x.l)}</td><td>${x.n}</td><td>${x.v}</td><td>${Math.round(100*x.v/x.n)}%</td></tr>`).join("")||`<tr><td colspan="4" class="empty">Sin mensajes registrados.</td></tr>`}</table></div>
+  <div class="panel"><h2>Ventas de los últimos 30 días</h2><table class="tbl"><tr><th>Fecha</th><th>Artículo</th><th>Cliente</th><th>Importe</th></tr>${vendidos.sort((a,b)=>b.t-a.t).map(v=>`<tr><td class="sm">${fd(v.t)}</td><td>${esc(v.a.codigo)} ${esc(v.a.modelo||"")}</td><td class="sm">${esc(v.cliente||"")}</td><td>${money((+v.precio||0)*(+v.cant||1))}</td></tr>`).join("")||`<tr><td colspan="4" class="empty">Sin ventas.</td></tr>`}</table></div></div>`;
+}
+function vSiguiente(){const n=[...S.venta.values()].map(a=>+(String(a.codigo||"").match(/(\d+)$/)||[0,0])[1]).reduce((m,x)=>Math.max(m,x),0)+1;return "OA-"+String(n).padStart(3,"0")}
+function vFicha(id){
+  const a=id?S.venta.get(id):{estatus:"borrador",tipo:"Multifuncional",estado:"Seminuevo",cantidad:1,negociable:false,envio:false,entrega:"Tlalnepantla, Edo. de México",fotos:[]};if(!a)return;
+  const sel=(k,opts,v)=>`<select class="f" data-vv="${k}">${opts.map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("")}</select>`;
+  const inp=(k,l,t="text",x="")=>`<label class="fl">${l}<input class="f" data-vv="${k}" type="${t}" value="${esc(a[k]??"")}" ${x}></label>`;
+  const txt=id?vTexto(a):"";const tML=vTitulo(a).slice(0,60);
+  drawer(`<button class="btn sm x" data-close>Cerrar</button><div class="muted sm">${id?esc(a.codigo):"Nuevo artículo"} · ${vChip(a.estatus)}</div><h2>${id?esc(vTitulo(a)||"(sin modelo)"):"Nuevo artículo a la venta"}</h2>
+   <div class="panel" style="margin-top:12px"><h2>Datos del artículo <span class="muted sm">los captura Lalo</span></h2><div class="form">
+    <label class="fl">Tipo${sel("tipo",V_TIPOS,a.tipo)}</label>${inp("marca","Marca","text",'placeholder="Kyocera"')}
+    ${inp("modelo","Modelo exacto","text",'placeholder="ECOSYS M2040dn"')}<label class="fl">Estado${sel("estado",V_ESTADOS,a.estado)}</label>
+    ${inp("contador","Contador de páginas","number",'placeholder="45000"')}${inp("cantidad","Cantidad","number",'min="1"')}
+    <label class="fl full">Especificaciones clave<input class="f" data-vv="specs" value="${esc(a.specs||"")}" placeholder="B/N, 40 ppm, dúplex, red, escáner ADF"></label>
+    <label class="fl full">Compatible con (tóner o refacción)<input class="f" data-vv="compatible" value="${esc(a.compatible||"")}" placeholder="Kyocera M2040dn, M2540dn, M2640idw"></label>
+    <label class="fl full">Qué incluye<input class="f" data-vv="incluye" value="${esc(a.incluye||"")}" placeholder="Cable de corriente y tóner al 70%"></label>
+    ${inp("precio","Precio de venta (MXN, IVA incluido)","number",'step="1"')}${inp("garantia","Garantía","text",'placeholder="3 meses"')}
+    <label class="fl row" style="flex-direction:row;align-items:center"><input type="checkbox" data-vv="negociable" ${a.negociable?"checked":""}> Precio negociable</label>
+    <label class="fl row" style="flex-direction:row;align-items:center"><input type="checkbox" data-vv="volumen" ${a.volumen?"checked":""}> Precio especial por volumen</label>
+    ${inp("entrega","Entrega desde (ciudad / colonia)")}<label class="fl row" style="flex-direction:row;align-items:center"><input type="checkbox" data-vv="envio" ${a.envio?"checked":""}> Hacemos envíos</label>
+    <label class="fl full">Notas internas (no se publican: precio mínimo, ubicación en almacén, detalles)<textarea class="f" data-vv="notas">${esc(a.notas||"")}</textarea></label>
+    <label class="fl">Estado de la publicación<select class="f" data-vv="estatus">${V_EST.map(([k,l])=>`<option value="${k}" ${a.estatus===k?"selected":""}>${l}</option>`).join("")}</select></label></div>
+    <div class="row" style="margin-top:12px"><button class="btn pri" data-a="vGuardar" data-id="${esc(id||"")}">${id?"Guardar":"Crear artículo"}</button>${id&&a.estatus==="borrador"?`<button class="btn" data-a="vListo" data-id="${esc(id)}">Guardar y marcar «Listo para publicar»</button>`:""}</div></div>
+   ${id?`<div class="panel" style="margin-top:14px"><h2>Fotos <span class="muted sm">${(a.fotos||[]).length} · de 3 a 6, con buena luz: frente, lado, panel, etiqueta del modelo y contador</span></h2>
+    <div class="row">${(a.fotos||[]).map((f,i)=>`<div style="position:relative"><a href="${esc(fotoUrl(f))}" target="_blank" rel="noopener"><img src="${esc(fotoUrl(f))}" alt="Foto ${i+1}" style="width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>${canW()?`<button class="btn sm" data-vfdel="${i}" style="position:absolute;top:4px;right:4px;padding:1px 7px" aria-label="Quitar foto">✕</button>`:""}</div>`).join("")}
+    ${canW()?`<label class="btn">Agregar fotos<input type="file" accept="image/*" multiple id="vfotos" class="hide"></label>`:""}</div><p class="muted sm" style="margin-bottom:0">Toca una foto para abrirla en grande y guardarla para la publicación.</p></div>
+   <div class="panel" style="margin-top:14px"><h2>Texto para publicar <span class="muted sm">lo usa Toni</span></h2>
+    <div class="fl">Título (Marketplace y Facebook)<div class="row"><input class="f" readonly value="${esc(vTitulo(a))}" style="flex:1" id="vt1"><button class="btn sm" data-vcopy="vt1">Copiar</button></div></div>
+    <div class="fl" style="margin-top:8px">Título Mercado Libre (máx. 60 caracteres)<div class="row"><input class="f" readonly value="${esc(tML)}" style="flex:1" id="vt2"><button class="btn sm" data-vcopy="vt2">Copiar</button></div></div>
+    <div class="fl" style="margin-top:8px">Descripción<textarea class="f" readonly id="vt3" style="min-height:190px">${esc(txt)}</textarea><div><button class="btn sm" data-vcopy="vt3">Copiar descripción</button></div></div>
+    ${!a.precio||!a.modelo||(a.fotos||[]).length<3?`<p class="sm" style="color:var(--warn);margin-bottom:0">Antes de publicar: ${[!a.modelo&&"falta el modelo exacto",!a.precio&&"falta el precio",(a.fotos||[]).length<3&&"faltan fotos (mínimo 3)"].filter(Boolean).join(" · ")}.</p>`:""}</div>
+   <div class="panel" style="margin-top:14px"><h2>Dónde está publicado</h2>${V_PUB.map(([k,l])=>`<div class="row" style="margin-bottom:8px"><label class="row" style="min-width:200px"><input type="checkbox" data-vpub="${k}" ${a.pub?.[k]?.on?"checked":""}> ${l}</label><input class="f" data-vpuburl="${k}" placeholder="Enlace de la publicación" value="${esc(a.pub?.[k]?.url||"")}" style="flex:1;min-width:180px">${a.pub?.[k]?.url?`<a class="btn sm" href="${esc(a.pub[k].url)}" target="_blank" rel="noopener">Abrir</a>`:""}</div>`).join("")}
+    <div class="row"><button class="btn sm pri" data-a="vGuardarPub" data-id="${esc(id)}">Guardar publicación</button></div></div>
+   <div class="panel" style="margin-top:14px"><h2>Vender</h2><div class="form"><label class="fl">Cantidad<input class="f" id="vs_c" type="number" min="1" value="1"></label><label class="fl">Precio final por pieza<input class="f" id="vs_p" type="number" value="${esc(a.precio||"")}"></label>
+    <label class="fl full">Cliente (nombre o empresa)<input class="f" id="vs_n" list="cotcli2"></label><datalist id="cotcli2">${[...S.clientes.values()].map(c=>`<option value="${esc(c.nombre)}">`).join("")}</datalist></div>
+    <div class="row" style="margin-top:10px"><button class="btn pri" data-a="vVender" data-id="${esc(id)}">Registrar venta</button><button class="btn" data-a="vApartar" data-id="${esc(id)}">${a.estatus==="apartado"?"Quitar apartado":"Apartar"}</button><button class="btn" data-a="vCotizar" data-id="${esc(id)}">+ Cotización</button></div>
+    ${(a.ventas||[]).length?`<table class="tbl sm" style="margin-top:10px">${a.ventas.map(v=>`<tr><td>${fd(v.t)}</td><td>${v.cant} × ${money(v.precio)}</td><td>${esc(v.cliente||"")}</td><td class="muted">${esc(nombreP(v.por))}</td></tr>`).join("")}</table>`:""}</div>
+   ${[...S.consultas.values()].filter(c=>c.articuloId===id).length?`<div class="panel" style="margin-top:14px"><h2>Mensajes de compradores sobre este artículo</h2>${[...S.consultas.values()].filter(c=>c.articuloId===id).sort((x,y)=>y.fecha-x.fecha).map(c=>`<div class="pitem click" data-vcon="${esc(c._id)}"><div class="sm"><b>${esc(c.nombre||"Comprador")}</b> · ${esc(V_CANL[c.canal]||"")} · ${esc((c.pregunta||"").slice(0,100))}</div>${cChip(c.estado)}</div>`).join("")}</div>`:""}`:""}`,L=>{bindCommon(L);bindVFicha(L,id);L.querySelectorAll("[data-vcon]").forEach(x=>x.onclick=()=>cFicha(x.dataset.vcon))});
+}
+function vDatos(L){const d={};L.querySelectorAll("[data-vv]").forEach(el=>{const k=el.dataset.vv;d[k]=el.type==="checkbox"?el.checked:el.type==="number"?(el.value===""?"":+el.value):el.value.trim()});return d}
+function bindVFicha(L,id){
+  L.querySelectorAll("[data-vcopy]").forEach(b=>b.onclick=async()=>{const t=L.querySelector("#"+b.dataset.vcopy);try{await navigator.clipboard.writeText(t.value);toast("Copiado")}catch(e){t.focus();t.select();toast("Pulsa Cmd + C para copiar")}});
+  const fi=L.querySelector("#vfotos");if(fi)fi.onchange=async()=>{const a=S.venta.get(id);const fs=[...fi.files];if(!fs.length)return;const out=[...(a.fotos||[])];
+    for(let i=0;i<fs.length;i++){toast(`Subiendo foto ${i+1} de ${fs.length}…`);const path="venta/"+id+"/"+uid()+".jpg";const {error}=await sb.storage.from("fotos").upload(path,await shrink(fs[i]),{contentType:"image/jpeg"});if(error){toast("No se pudo subir una foto");break}out.push(path)}
+    if(await upd("venta/"+id,{fotos:out},"Fotos agregadas")){S.venta.set(id,{...a,fotos:out});vFicha(id)}};
+  L.querySelectorAll("[data-vfdel]").forEach(b=>b.onclick=async()=>{const a=S.venta.get(id);const f=[...(a.fotos||[])];f.splice(+b.dataset.vfdel,1);if(await upd("venta/"+id,{fotos:f},"Foto quitada")){S.venta.set(id,{...a,fotos:f});vFicha(id)}});
+}
+function cFicha(id,pre){
+  const c=id?S.consultas.get(id):{canal:"marketplace",estado:"nueva",articuloId:pre?.articuloId||""};if(!c)return;const a=S.venta.get(c.articuloId);const lalo=S.rol==="jefe_tecnico";
+  const arts=[...S.venta.values()].filter(x=>x.estatus!=="vendido"||x._id===c.articuloId).sort((x,y)=>(x.codigo||"").localeCompare(y.codigo||""));
+  const tecs=tecnicosVenta();const tel=String(c.contacto||"").replace(/\D/g,"");
+  drawer(`<button class="btn sm x" data-close>Cerrar</button><div class="muted sm">${id?cChip(c.estado):"Nuevo mensaje"}</div><h2>${id?esc(c.nombre||"Comprador"):"Mensaje de comprador"}</h2>
+   ${id?`<p class="muted" style="margin-top:4px">${esc(V_CANL[c.canal]||c.canal)} · ${fdt(c.fecha)}${c.contacto?" · "+esc(c.contacto):""}</p>`:""}
+   <div class="panel" style="margin-top:12px"><div class="form">
+    <label class="fl">Canal<select class="f" data-cv="canal" ${lalo?"disabled":""}>${V_CANALES.map(([k,l])=>`<option value="${k}" ${c.canal===k?"selected":""}>${l}</option>`).join("")}</select></label>
+    <label class="fl">Nombre<input class="f" data-cv="nombre" value="${esc(c.nombre||"")}" ${lalo?"disabled":""}></label>
+    <label class="fl">Contacto (WhatsApp, perfil o usuario)<input class="f" data-cv="contacto" value="${esc(c.contacto||"")}" ${lalo?"disabled":""}></label>
+    <label class="fl">Artículo<select class="f" data-cv="articuloId" ${lalo?"disabled":""}><option value="">— sin artículo concreto —</option>${arts.map(x=>`<option value="${esc(x._id)}" ${x._id===c.articuloId?"selected":""}>${esc(x.codigo)} · ${esc([x.marca,x.modelo].join(" "))}${x.precio?" · "+money(x.precio):""}</option>`).join("")}</select></label>
+    <label class="fl full">Qué pregunta el comprador<textarea class="f" data-cv="pregunta" ${lalo?"disabled":""}>${esc(c.pregunta||"")}</textarea></label></div>
+    ${!lalo?`<div class="row" style="margin-top:10px"><button class="btn pri" data-a="cGuardar" data-id="${esc(id||"")}">${id?"Guardar":"Registrar mensaje"}</button>${tel.length>=10?`<a class="btn wa" target="_blank" rel="noopener" href="${waLink(tel,"Hola "+(c.nombre||"")+", le escribe Office Automation sobre su consulta.")}">WhatsApp</a>`:""}</div>`:""}</div>
+   ${a?`<div class="panel" style="margin-top:14px"><div class="row" style="justify-content:space-between"><div><b>${esc(a.codigo)}</b> ${esc(vTitulo(a))}<div class="muted sm">${a.precio?money(a.precio):"sin precio"} · ${esc(a.estado||"")}${a.contador?" · "+fmt(a.contador)+" págs.":""}${a.garantia?" · garantía "+esc(a.garantia):""}</div></div><button class="btn sm" data-vart="${esc(a._id)}">Ver artículo</button></div></div>`:""}
+   ${id?`<div class="panel" style="margin-top:14px"><h2>Consulta técnica</h2>
+    ${c.preguntaLalo?`<div class="sm"><span class="muted">${esc(nombreP(c.preguntoPor))} preguntó a ${esc(nombreP(c.paraLalo))} · ${fdt(c.tPreg)}</span><div style="white-space:pre-wrap">${esc(c.preguntaLalo)}</div></div>`:""}
+    ${c.respuesta?`<div class="sm" style="margin-top:8px;padding:10px;border-radius:8px;background:var(--soft)"><span class="muted">Respuesta de ${esc(nombreP(c.respondioPor))} · ${fdt(c.tResp)}</span><div style="white-space:pre-wrap">${esc(c.respuesta)}</div></div>`:""}
+    ${lalo&&c.estado==="lalo"?`<label class="fl" style="margin-top:10px">Tu respuesta (precio, estado del equipo, disponibilidad, entrega…)<textarea class="f" id="c_resp"></textarea></label><div class="row" style="margin-top:8px"><button class="btn pri" data-a="cResponder" data-id="${esc(id)}">Enviar respuesta</button></div>`:""}
+    ${!lalo&&["nueva","seguimiento","respondida"].includes(c.estado)?`<div class="form" style="margin-top:10px"><label class="fl full">Pregunta para el equipo técnico<textarea class="f" id="c_preg" placeholder="Ej. ¿Precio final si se lleva 2? ¿Puede entregarse el sábado en Naucalpan? ¿Cuánto tóner trae?"></textarea></label>
+     <label class="fl">Preguntar a<select class="f" id="c_para">${tecs.map(t=>`<option value="${esc(t.id)}">${esc(t.nombre)}</option>`).join("")||`<option value="">(da de alta a Lalo como Jefe técnico)</option>`}</select></label></div>
+     <div class="row" style="margin-top:8px"><button class="btn" data-a="cPreguntar" data-id="${esc(id)}" ${tecs.length?"":"disabled"}>Preguntar a Lalo</button></div>`:""}</div>
+   ${!lalo?`<div class="panel" style="margin-top:14px"><h2>Resultado</h2><div class="row"><button class="btn" data-a="cEstado" data-id="${esc(id)}|seguimiento">Ya le contesté: en seguimiento</button><button class="btn pri" data-a="cEstado" data-id="${esc(id)}|venta">Se vendió</button><button class="btn" data-a="cEstado" data-id="${esc(id)}|sin_venta">Sin venta</button></div>
+    <label class="fl" style="margin-top:10px">Motivo o nota (opcional)<input class="f" id="c_nota" value="${esc(c.nota||"")}" placeholder="Ej. le pareció caro, compró en otro lado, no contestó"></label></div>`:""}
+   <div class="panel" style="margin-top:14px"><h2>Historial</h2>${(c.hist||[]).slice().reverse().map(h=>`<div class="sm"><span class="muted">${fdt(h.t)}</span> · ${esc(h.ev)} <span class="muted">(${esc(nombreP(h.por))})</span></div>`).join("")}</div>`:""}`,L=>{bindCommon(L);L.querySelectorAll("[data-vart]").forEach(x=>x.onclick=()=>vFicha(x.dataset.vart))});
+}
+const histV=(c,ev)=>[...(c.hist||[]),{t:Date.now(),ev,por:S.me?.id||""}];
+Object.assign(A,{
+ vNuevo:()=>vFicha(null),
+ cNueva:()=>cFicha(null),
+ async vGuardar(id,L,listo){const d=vDatos(L);if(!d.modelo&&!d.marca){toast("Escribe al menos la marca y el modelo");return}if(listo)d.estatus="listo";
+  if(id){const a=S.venta.get(id);if(await upd("venta/"+id,d,"Artículo guardado")){S.venta.set(id,{...a,...d});vFicha(id)}}
+  else{const nid=uid();const a={...d,codigo:vSiguiente(),fotos:[],pub:{},ventas:[],creado:Date.now(),por:S.me?.id||""};if(await save("venta/"+nid,a,"Artículo "+a.codigo+" creado")){S.venta.set(nid,{...a,_id:nid});vFicha(nid)}}},
+ vListo(id,L){A.vGuardar(id,L,true)},
+ async vGuardarPub(id,L){const a=S.venta.get(id),pub={...(a.pub||{})};V_PUB.forEach(([k])=>{const on=L.querySelector(`[data-vpub="${k}"]`).checked,url=L.querySelector(`[data-vpuburl="${k}"]`).value.trim();pub[k]={on:on||!!url,url,fecha:pub[k]?.fecha||(on||url?Date.now():null)}});
+  const algo=V_PUB.some(([k])=>pub[k].on);const est=algo&&["borrador","listo"].includes(a.estatus)?"publicado":a.estatus;
+  if(await upd("venta/"+id,{pub,estatus:est},"Publicación guardada")){S.venta.set(id,{...a,pub,estatus:est});vFicha(id)}},
+ async vVender(id,L){const a=S.venta.get(id);const cant=Math.max(1,+val(L,"#vs_c")||1),precio=+val(L,"#vs_p")||+a.precio||0,cli=val(L,"#vs_n");if(cant>(+a.cantidad||1)){toast("Solo hay "+(+a.cantidad||1)+" disponibles");return}
+  const quedan=(+a.cantidad||1)-cant;const v={t:Date.now(),cant,precio,cliente:cli,por:S.me?.id||""};const ch={ventas:[...(a.ventas||[]),v],cantidad:quedan||0,estatus:quedan>0?a.estatus==="apartado"?"publicado":a.estatus:"vendido"};
+  if(await upd("venta/"+id,ch,quedan>0?`Venta registrada · quedan ${quedan}`:"Vendido")){S.venta.set(id,{...a,...ch});vFicha(id)}},
+ async vApartar(id){const a=S.venta.get(id);const e=a.estatus==="apartado"?(V_PUB.some(([k])=>a.pub?.[k]?.on)?"publicado":"listo"):"apartado";if(await upd("venta/"+id,{estatus:e},e==="apartado"?"Apartado":"Disponible de nuevo")){S.venta.set(id,{...a,estatus:e});vFicha(id)}},
+ vCotizar(id){const a=S.venta.get(id);cotForm(null,"cotizacion",{tipo:"cotizacion",fecha:Date.now(),estado:"borrador",marcas:{kyocera:/kyocera/i.test(a.marca||""),konica:/konica/i.test(a.marca||"")},
+  asunto:`Cotización de ${(a.tipo||"equipo").toLowerCase()} ${a.estado?a.estado.toLowerCase():""}`.trim()+".",partidas:[{cant:1,desc:`${vTitulo(a)}${a.specs?"\n"+a.specs:""}${a.contador?"\nContador: "+fmt(a.contador)+" páginas":""}${a.incluye?"\nIncluye: "+a.incluye:""}${a.garantia?"\nGarantía: "+a.garantia:""}\nRef. ${a.codigo}`,precio:a.precio?Math.round(+a.precio/1.16*100)/100:""}],notas:"Precio sujeto a disponibilidad. Vigencia de 7 días."})},
+ async cGuardar(id,L){const d={};L.querySelectorAll("[data-cv]").forEach(el=>d[el.dataset.cv]=el.value.trim());if(!d.pregunta&&!d.nombre){toast("Escribe el nombre o la pregunta del comprador");return}
+  if(id){const c=S.consultas.get(id);if(await upd("consultas/"+id,d,"Guardado")){S.consultas.set(id,{...c,...d});cFicha(id)}}
+  else{const nid=uid();const c={...d,fecha:Date.now(),estado:"nueva",resp:S.me?.id||"",hist:[{t:Date.now(),ev:"Mensaje registrado ("+(V_CANL[d.canal]||d.canal)+")",por:S.me?.id||""}]};if(await save("consultas/"+nid,c,"Mensaje registrado")){S.consultas.set(nid,{...c,_id:nid});cFicha(nid)}}},
+ async cPreguntar(id,L){const c=S.consultas.get(id);const q=val(L,"#c_preg"),para=val(L,"#c_para");if(!q){toast("Escribe la pregunta para Lalo");return}
+  const ch={preguntaLalo:q,paraLalo:para,preguntoPor:S.me?.id||"",tPreg:Date.now(),respuesta:"",tResp:null,estado:"lalo",hist:histV(c,"Pregunta a "+nombreP(para)+": "+q.slice(0,80))};
+  if(await upd("consultas/"+id,ch,"Pregunta enviada a "+nombreP(para))){S.consultas.set(id,{...c,...ch});cFicha(id)}},
+ async cResponder(id,L){const c=S.consultas.get(id);const r=val(L,"#c_resp");if(!r){toast("Escribe la respuesta");return}
+  const ch={respuesta:r,respondioPor:S.me?.id||"",tResp:Date.now(),estado:"respondida",hist:histV(c,"Respuesta técnica: "+r.slice(0,80))};
+  if(await upd("consultas/"+id,ch,"Respuesta enviada")){S.consultas.set(id,{...c,...ch});closeDr();render()}},
+ async cEstado(x,L){const [id,e]=x.split("|");const c=S.consultas.get(id);const nota=val(L,"#c_nota");
+  const ch={estado:e,nota,hist:histV(c,C_ESTL[e]+(nota?": "+nota:""))};if(["venta","sin_venta"].includes(e))ch.cierre=Date.now();
+  if(await upd("consultas/"+id,ch,C_ESTL[e])){S.consultas.set(id,{...c,...ch});if(e==="venta"&&c.articuloId){toast("Registra la venta en la ficha del artículo");vFicha(c.articuloId)}else cFicha(id)}}
+});
+async function vImportar(file){
+  if(!window.XLSX){await new Promise((ok,ko)=>{const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";s.onload=ok;s.onerror=ko;document.head.appendChild(s)}).catch(()=>{})}
+  if(!window.XLSX){toast("No se pudo abrir el lector de Excel");return}
+  const wb=XLSX.read(await file.arrayBuffer());const ws=wb.Sheets["Productos"]||wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+  const hi=rows.findIndex(r=>r.some(c=>/modelo/i.test(String(c))));if(hi<0){toast("No encuentro la fila de encabezados (Modelo exacto)");return}
+  const H=rows[hi].map(h=>String(h).toLowerCase());const col=re=>H.findIndex(h=>re.test(h));
+  const C={codigo:col(/^id$/),tipo:col(/^tipo/),marca:col(/marca/),modelo:col(/modelo/),compatible:col(/compatible/),estado:col(/^estado/),contador:col(/contador/),specs:col(/especific/),incluye:col(/incluye/),cantidad:col(/cantidad/),precio:col(/precio/),negociable:col(/negociable/),garantia:col(/garant/),entrega:col(/entrega/),envio:col(/env[ií]o/),notas:col(/^notas/)};
+  const existentes=new Set([...S.venta.values()].map(a=>a.codigo));let n=0,omit=0;
+  for(const r of rows.slice(hi+1)){const g=k=>C[k]>=0?r[C[k]]:"";if(!String(g("modelo")).trim()&&!String(g("marca")).trim())continue;
+    const cod=String(g("codigo")||"").trim()||vSiguiente();if(existentes.has(cod)||(cod==="OA-001"&&/M2040dn/i.test(g("modelo"))&&+g("precio")===6500)){omit++;continue}
+    const si=v=>/^s[ií]/i.test(String(v));const a={codigo:cod,tipo:g("tipo")||"Otro",marca:String(g("marca")).trim(),modelo:String(g("modelo")).trim(),compatible:String(g("compatible")).trim(),estado:g("estado")||"Seminuevo",contador:+g("contador")||"",specs:String(g("specs")).trim(),incluye:String(g("incluye")).trim(),
+     cantidad:+g("cantidad")||1,precio:+String(g("precio")).replace(/[^\d.]/g,"")||"",negociable:si(g("negociable")),garantia:String(g("garantia")).trim(),entrega:String(g("entrega")).trim(),envio:si(g("envio")),notas:String(g("notas")).trim(),estatus:"borrador",fotos:[],pub:{},ventas:[],creado:Date.now(),por:S.me?.id||""};
+    const nid=uid();if(await save("venta/"+nid,a)){S.venta.set(nid,{...a,_id:nid});existentes.add(cod);n++}}
+  toast(`Importados ${n} artículos${omit?` · ${omit} omitidos (ya existían o eran el ejemplo)`:""}`);render()}
+function bindVenta(m){
+  m.querySelectorAll("[data-vtab]").forEach(b=>b.onclick=()=>{VE.tab=b.dataset.vtab;render()});
+  m.querySelectorAll("[data-vf]").forEach(el=>{const h=()=>{VE.f={...VE.f,[el.dataset.vf]:el.value};render();const n=$(`#main [data-vf="${el.dataset.vf}"]`);if(n&&el.tagName==="INPUT"){n.focus();n.setSelectionRange(n.value.length,n.value.length)}};el.addEventListener(el.tagName==="INPUT"?"input":"change",h)});
+  m.querySelectorAll("[data-vfm]").forEach(el=>el.onchange=()=>{VE.fm={...VE.fm,[el.dataset.vfm]:el.value};render()});
+  m.querySelectorAll("[data-vart]").forEach(x=>x.onclick=()=>vFicha(x.dataset.vart));
+  m.querySelectorAll("[data-vcon]").forEach(x=>x.onclick=()=>cFicha(x.dataset.vcon));
+  const fi=m.querySelector("#vimp");if(fi)fi.onchange=()=>fi.files[0]&&vImportar(fi.files[0]);
+}
+
 /* ===================== arranque ===================== */
 function gate(html){S.gateOk=false;$("#nav").innerHTML="";$("#mnav").innerHTML="";$("#main").innerHTML=`<div class="gate">${html}</div>`}
 function decideRole(){
@@ -1178,7 +1392,7 @@ async function start(session){
   db=mkDb();
   db.doc("config/usuarios").onSnapshot(s=>{S.usuarios=(s.exists&&s.data().u)||{};if(decideRole()){const u=S.usuarios[S.me.id];if(u?.alias)S.me.name=u.alias;$("#who").innerHTML=`<b>${esc(u?.alias||S.me.name)}</b>${esc(ROLES[S.rol]||"")}<div><a href="#" onclick="logout();return false" style="color:#8FA3BD;font-size:12.5px">Salir</a></div>`;render()}});
   db.doc("config/toner").onSnapshot(s=>{S.toner=(s.exists&&s.data().items)||[];if(S.gateOk)later()});
-  listen("clientes",S.clientes);listen("equipos",S.equipos);listen("tickets",S.tickets);listen("oportunidades",S.opps);listen("solicitudes",S.sol);listen("inventario",S.inv);listen("cotizaciones",S.cot);listen("tareas",S.tareas);
+  listen("clientes",S.clientes);listen("equipos",S.equipos);listen("tickets",S.tickets);listen("oportunidades",S.opps);listen("solicitudes",S.sol);listen("inventario",S.inv);listen("cotizaciones",S.cot);listen("venta",S.venta);listen("consultas",S.consultas);listen("tareas",S.tareas);
   db.doc("config/crm").onSnapshot(s=>{S.crm=(s.exists&&s.data())||null;if(S.gateOk)later()});
   db.doc("crm_hechos/"+new Date(Date.now()+TZ).toISOString().slice(0,10)).onSnapshot(s=>{S.crmHechos=(s.exists&&s.data())||{};if(S.gateOk)later()});
   db.doc("config/empresa").onSnapshot(s=>{S.empresa=(s.exists&&s.data())||{}});
