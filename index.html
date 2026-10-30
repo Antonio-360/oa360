@@ -907,7 +907,7 @@ function vProspectos(){
 }
 /* ---------- Hoy ---------- */
 function pHoy(){
-  const me=S.me.id,t=hoyP();const H=pload("hoy:"+me,()=>rpc("prosp_hoy",{p_persona:me}));
+  const yo=S.me.id,ver=["admin","direccion"].includes(S.rol),me=ver&&PR.hoyDe?PR.hoyDe:yo,otro=me!==yo,t=hoyP();const H=pload("hoy:"+me,()=>rpc("prosp_hoy",{p_persona:me}));
   if(H===undefined)return `<div class="panel empty">Cargando tu día…</div>`;if(!H)return `<div class="panel empty">No se pudo cargar. Recarga la página.</div>`;
   const frio=frioP(me),meta=metaDiaP(me),n=H.hechos.length,falta=Math.max(0,meta-n);
   PR.cola=PR.cola||(()=>{try{return localStorage.getItem("oa_cola")}catch(e){return null}})()||"tlal1";
@@ -918,8 +918,9 @@ function pHoy(){
     ${(seg||hecho)&&l.ult?`<div class="muted sm">Último: ${esc((CANP[l.ult.c]||[])[1]||"")} · ${esc(RESP_L[l.ult.r]||"")} · ${sdate(l.ult.d)}${seg&&l.prox?` · <span style="${l.prox<t?"color:var(--bad);font-weight:600":""}">seguimiento ${l.prox<t?"vencido ":""}${sdate(l.prox)}</span>`:""}</div>`:""}</div>
     <div class="row">${chipP(l.estado)}${hecho?"":`<button class="btn sm pri" data-pop="${esc(l.id)}" data-pfocus="1">Registrar</button>`}</div></div>`;
   const lista=(arr,vacio,f)=>arr.length?arr.map(l=>f(l)).join(""):`<div class="muted sm" style="padding:10px 2px">${vacio}</div>`;
-  return `<div class="grid g2" style="align-items:start"><div><div class="muted sm">${esc(new Date(Date.now()+TZ).toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long",timeZone:"UTC"}))}</div>
-     <h2 style="font-size:22px;margin:2px 0 4px">Hola, ${esc(nombreP(me))}</h2><div class="muted">${H.nseg?`Tienes <b>${H.nseg}</b> seguimiento${H.nseg>1?"s":""} para hoy`:"Sin seguimientos pendientes"} · ${fmt(H.nnuevos)} empresas asignadas sin contactar</div></div>
+  const selDia=ver?`<div class="row" style="margin-bottom:12px"><span class="muted sm b">Ver el día de</span><select class="f" data-phoyde>${personasP().map(m=>`<option value="${esc(m.id)}" ${m.id===me?"selected":""}>${esc(m.nombre)}${m.id===yo?" (yo)":""}</option>`).join("")}</select>${otro?`<span class="muted sm">Lo que registres queda a tu nombre.</span>`:""}</div>`:"";
+  return selDia+`<div class="grid g2" style="align-items:start"><div><div class="muted sm">${esc(new Date(Date.now()+TZ).toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long",timeZone:"UTC"}))}</div>
+     <h2 style="font-size:22px;margin:2px 0 4px">${otro?"Día de "+esc(nombreP(me)):"Hola, "+esc(nombreP(me))}</h2><div class="muted">${H.nseg?`Tienes <b>${H.nseg}</b> seguimiento${H.nseg>1?"s":""} para hoy`:"Sin seguimientos pendientes"} · ${fmt(H.nnuevos)} empresas asignadas sin contactar</div></div>
     <div class="panel"><div class="row" style="justify-content:space-between"><span class="muted sm b">${frio?"LLAMADAS EN FRÍO DE HOY":"CONTACTOS DE HOY"}</span><span style="font-size:26px;font-weight:800">${n}${meta?`<span class="muted" style="font-size:15px"> / ${meta}</span>`:""}</span></div>
      ${meta?`<div class="meter"><i style="width:${Math.min(100,Math.round(100*n/meta))}%"></i></div><div class="muted sm" style="margin-top:6px">${n>=meta?"Meta del día cumplida":"Faltan "+falta+" para la meta"}</div>`:`<div class="muted sm">Sin meta de llamadas en frío: seguimientos y clientes.</div>`}</div></div>
    ${agendaP(me,H)}
@@ -927,7 +928,7 @@ function pHoy(){
     <div style="display:grid;gap:16px;min-width:0"><div class="panel"><h2>1 · Seguimientos de hoy <span class="muted sm">${H.nseg}</span></h2>${lista(H.seg,"Nada vencido. Al registrar un contacto pon la fecha del próximo seguimiento y aparecerá aquí ese día.",l=>fila(l,true))}</div>
      ${frio?`<div class="panel"><h2>2 · Empresas en proceso <span class="muted sm">${H.proceso.length} con interés, cita o propuesta</span></h2>${lista(H.proceso,"Cuando una empresa muestre interés o agende cita aparecerá aquí para darle seguimiento y cotizarla.",l=>fila(l,true))}</div>`:""}</div>
     ${frio?`<div class="panel"><h2>3 · Nuevos por llamar <span class="muted sm">${fmt(H.nnuevos)}</span></h2>
-      ${H.nnuevos<Math.max(falta,1)?`<div class="bulkp"><b>Tomar empresas de</b><select class="f" data-pcola>${COLAS.map(([k,l])=>`<option value="${k}" ${k===PR.cola?"selected":""}>${esc(l)}</option>`).join("")}</select>
+      ${H.nnuevos<Math.max(falta,1)&&!otro?`<div class="bulkp"><b>Tomar empresas de</b><select class="f" data-pcola>${COLAS.map(([k,l])=>`<option value="${k}" ${k===PR.cola?"selected":""}>${esc(l)}</option>`).join("")}</select>
         <button class="btn sm pri" data-pa="tomar" ${libres?"":"disabled"}>Tomar ${Math.min(Math.max(falta-H.nnuevos,1),libres||0)}</button><span class="muted sm">${libres===undefined?"contando…":fmt(libres||0)+" libres con teléfono"}</span></div>`:""}
       ${lista(H.nuevos.slice(0,Math.max(falta,10)),"No tienes empresas asignadas sin contactar. Toma un bloque de la cola de arriba.",l=>fila(l))}</div>`
     :`<div class="panel"><h2>2 · Empresas en proceso <span class="muted sm">${H.proceso.length}</span></h2>${lista(H.proceso,"Aquí aparecen tus empresas con interés, cita o propuesta: referidos, conocidos y las que te pasan.",l=>fila(l,true))}</div>`}
@@ -944,8 +945,8 @@ function agendaP(me,H){
   (crmCfg().rutinas||[]).filter(r=>r.persona===me&&(r.dias||[]).map(Number).includes(dow)).forEach(r=>items.push({txt:r.texto,sub:"Rutina",done:!!hech[r.id],chk:"r:"+r.id}));
   [...S.tareas.values()].filter(k=>k.persona===me&&!(k.hecha&&k.hechaEl!==t)&&!(!k.hecha&&k.fecha>t)).forEach(k=>items.push({txt:k.texto,sub:!k.hecha&&k.fecha<t?"Pendiente desde el "+sdate(k.fecha):k.por&&k.por!==me?"Asignada por "+nombreP(k.por):"Tarea",done:!!k.hecha,chk:"t:"+k._id,alert:!k.hecha&&k.fecha<t,del:k._id}));
   const d=items.filter(i=>i.done).length;
-  return `<div class="panel" style="margin-top:16px"><h2>Tu agenda de hoy <span class="muted sm">${items.length?`${d} de ${items.length} hechas`:"nada programado"}</span></h2>
-   ${items.map(i=>`<div class="agi ${i.done?"done":""}">${i.chk?`<input type="checkbox" data-pchk="${esc(i.chk)}" ${i.done?"checked":""} aria-label="Marcar como hecha">`:`<span class="agb">${i.done?"✓":""}</span>`}
+  return `<div class="panel" style="margin-top:16px"><h2>${me!==S.me.id?"Agenda de "+esc(nombreP(me)):"Tu agenda de hoy"} <span class="muted sm">${items.length?`${d} de ${items.length} hechas`:"nada programado"}</span></h2>
+   ${items.map(i=>`<div class="agi ${i.done?"done":""}">${i.chk?`<input type="checkbox" data-pchk="${esc(i.chk)}" ${i.done?"checked":""} ${me!==S.me.id?"disabled":""} aria-label="Marcar como hecha">`:`<span class="agb">${i.done?"✓":""}</span>`}
      <div style="flex:1;min-width:0"><div class="b" style="${i.alert&&!i.done?"color:var(--bad)":""}">${esc(i.txt)}</div><div class="muted sm">${esc(i.sub||"")}</div>
      ${i.hot?`<div class="row" style="margin-top:6px">${i.hot.map(l=>`<button class="chip warn click" data-pop="${esc(l.id)}" data-pfocus="1">${esc(l.empresa)}</button>`).join("")}</div>`:""}</div>
      ${i.del&&!i.done?`<button class="btn sm" data-pdeltarea="${esc(i.del)}">Borrar</button>`:""}</div>`).join("")}
@@ -1121,6 +1122,7 @@ function bindProsp(m){
   m.querySelectorAll("[data-ppg]").forEach(b=>b.onclick=()=>{PR.page+=+b.dataset.ppg;render();$("#main").scrollTop=0});
   m.querySelectorAll("[data-psel]").forEach(c=>c.onchange=()=>{c.checked?PR.sel.add(c.dataset.psel):PR.sel.delete(c.dataset.psel);render()});
   const sa=m.querySelector("[data-pselall]");if(sa)sa.onchange=()=>{m.querySelectorAll("[data-psel]").forEach(c=>sa.checked?PR.sel.add(c.dataset.psel):PR.sel.delete(c.dataset.psel));render()};
+  const hd=m.querySelector("[data-phoyde]");if(hd)hd.onchange=()=>{PR.hoyDe=hd.value;render()};
   const pc=m.querySelector("[data-pcola]");if(pc)pc.onchange=()=>{PR.cola=pc.value;try{localStorage.setItem("oa_cola",PR.cola)}catch(e){}render()};
   m.querySelectorAll("[data-pdp]").forEach(b=>b.onclick=()=>{PR.dashP=b.dataset.pdp;render()});
   const dw=m.querySelector("[data-pdw]");if(dw)dw.onchange=()=>{PR.dashW=dw.value;render()};
@@ -1380,17 +1382,26 @@ function mkDb(){
   return{doc,collection};
 }
 window.logout=async()=>{await sb.auth.signOut();location.reload()};
-function loginScreen(msg){gate(`<div class="iso" style="display:inline-grid;margin-bottom:14px"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:var(--k)"></i></div><h1 style="margin:0 0 6px">OA 360</h1><p class="muted">Sistema interno de Office Automation. Escribe tu correo y te enviamos un enlace para entrar.</p>
-  <div class="row" style="justify-content:center;margin-top:16px"><input class="f" id="lg_e" type="email" placeholder="tu@officeautomation.com.mx" style="min-width:260px"><button class="btn pri" id="lg_b">Enviarme el enlace</button></div><p class="sm" id="lg_m" style="margin-top:12px">${esc(msg||"")}</p>`);
-  const go=async()=>{const e=$("#lg_e").value.trim().toLowerCase();if(!e)return;$("#lg_b").disabled=true;
+function loginScreen(msg){gate(`<div class="iso" style="display:inline-grid;margin-bottom:14px"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:var(--k)"></i></div><h1 style="margin:0 0 6px">OA 360</h1><p class="muted">Sistema interno de Office Automation.</p>
+  <div style="display:grid;gap:10px;max-width:340px;margin:16px auto 0;text-align:left"><label class="fl">Correo<input class="f" id="lg_e" type="email" autocomplete="username" placeholder="tu@officeautomation.com.mx"></label>
+   <label class="fl">Contraseña<input class="f" id="lg_p" type="password" autocomplete="current-password" placeholder="La que te dio Toni"></label>
+   <button class="btn pri" id="lg_b" style="justify-content:center">Entrar</button>
+   <button class="btn" id="lg_l" style="justify-content:center">No tengo contraseña: enviarme un enlace por correo</button></div><p class="sm" id="lg_m" style="margin-top:12px">${esc(msg||"")}</p>`);
+  const em=()=>$("#lg_e").value.trim().toLowerCase();
+  const entrar=async()=>{const e=em(),pw=$("#lg_p").value;if(!e||!pw){$("#lg_m").textContent="Escribe tu correo y tu contraseña.";return}$("#lg_b").disabled=true;
+    const {error}=await sb.auth.signInWithPassword({email:e,password:pw});$("#lg_b").disabled=false;if(error)$("#lg_m").textContent="Correo o contraseña incorrectos. Si no tienes contraseña, pide el enlace por correo."};
+  const enlace=async()=>{const e=em();if(!e){$("#lg_m").textContent="Escribe tu correo.";return}$("#lg_l").disabled=true;
     const {error}=await sb.auth.signInWithOtp({email:e,options:{shouldCreateUser:false,emailRedirectTo:location.origin+location.pathname}});
-    $("#lg_m").textContent=error?"No pudimos enviarte el enlace. Revisa el correo o pide a Toni que te invite.":"Listo: revisa tu correo y abre el enlace desde este mismo dispositivo.";$("#lg_b").disabled=false};
-  $("#lg_b").onclick=go;$("#lg_e").addEventListener("keydown",e=>{if(e.key==="Enter")go()})}
+    $("#lg_m").textContent=error?"No pudimos enviarte el enlace. Revisa el correo o pide a Toni que te dé acceso.":"Listo: revisa tu correo y abre el enlace desde este mismo dispositivo.";$("#lg_l").disabled=false};
+  $("#lg_b").onclick=entrar;$("#lg_l").onclick=enlace;$("#lg_p").addEventListener("keydown",e=>{if(e.key==="Enter")entrar()});$("#lg_e").addEventListener("keydown",e=>{if(e.key==="Enter")$("#lg_p").focus()})}
+window.cambiarClave=()=>drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>Cambiar mi contraseña</h2><p class="muted">Mínimo 8 caracteres. La usarás para entrar con tu correo.</p><div class="panel"><div class="form"><label class="fl">Nueva contraseña<input class="f" id="cc_1" type="password" autocomplete="new-password"></label><label class="fl">Repítela<input class="f" id="cc_2" type="password" autocomplete="new-password"></label></div><div class="row" style="margin-top:12px"><button class="btn pri" id="cc_b">Guardar contraseña</button></div></div>`,L=>{bindCommon(L);
+  L.querySelector("#cc_b").onclick=async()=>{const a=L.querySelector("#cc_1").value,b=L.querySelector("#cc_2").value;if(a.length<8){toast("Mínimo 8 caracteres");return}if(a!==b){toast("Las contraseñas no coinciden");return}
+   const {error}=await sb.auth.updateUser({password:a});if(error)toast("No se pudo cambiar: "+error.message);else{toast("Contraseña cambiada");closeDr()}}});
 async function start(session){
   const email=(session.user.email||"").toLowerCase();
   S.me={id:email,name:email.split("@")[0],isOwner:(window.OA_CONFIG.ADMINS||[]).map(x=>x.toLowerCase()).includes(email)};S.owner=S.me.isOwner;S.canWrite=true;
   db=mkDb();
-  db.doc("config/usuarios").onSnapshot(s=>{S.usuarios=(s.exists&&s.data().u)||{};if(decideRole()){const u=S.usuarios[S.me.id];if(u?.alias)S.me.name=u.alias;$("#who").innerHTML=`<b>${esc(u?.alias||S.me.name)}</b>${esc(ROLES[S.rol]||"")}<div><a href="#" onclick="logout();return false" style="color:#8FA3BD;font-size:12.5px">Salir</a></div>`;render()}});
+  db.doc("config/usuarios").onSnapshot(s=>{S.usuarios=(s.exists&&s.data().u)||{};if(decideRole()){const u=S.usuarios[S.me.id];if(u?.alias)S.me.name=u.alias;$("#who").innerHTML=`<b>${esc(u?.alias||S.me.name)}</b>${esc(ROLES[S.rol]||"")}<div><a href="#" onclick="cambiarClave();return false" style="color:#8FA3BD;font-size:12.5px">Contraseña</a> · <a href="#" onclick="logout();return false" style="color:#8FA3BD;font-size:12.5px">Salir</a></div>`;render()}});
   db.doc("config/toner").onSnapshot(s=>{S.toner=(s.exists&&s.data().items)||[];if(S.gateOk)later()});
   listen("clientes",S.clientes);listen("equipos",S.equipos);listen("tickets",S.tickets);listen("oportunidades",S.opps);listen("solicitudes",S.sol);listen("inventario",S.inv);listen("cotizaciones",S.cot);listen("venta",S.venta);listen("consultas",S.consultas);listen("tareas",S.tareas);
   db.doc("config/crm").onSnapshot(s=>{S.crm=(s.exists&&s.data())||null;if(S.gateOk)later()});
