@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
+<script src="logos.js"></script>
 <style>
 :root{
   --navy:#16263D;--navy2:#1F3350;--blue:#1B5E96;--teal:#3AAFC9;
@@ -126,6 +127,21 @@ canvas.sig{width:100%;height:170px;background:#fff;border:1px dashed var(--muted
   .mnav svg{display:block;margin:0 auto 2px}
 }
 @media (prefers-reduced-motion:no-preference){.dr{animation:sl .22s ease-out}@keyframes sl{from{transform:translateX(40px);opacity:.4}}}
+
+/* prospectos */
+.pitem{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:10px 2px;border-top:1px solid var(--line)}.pitem:first-of-type{border-top:0}
+.prio{font-size:11.5px;font-weight:600;padding:1px 6px;border-radius:4px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+.meter{height:12px;background:var(--soft);border-radius:6px;overflow:hidden;margin-top:8px}.meter i{display:block;height:100%;background:var(--ok)}
+.bulkp{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 12px;background:var(--soft);border-radius:10px;margin:10px 0}
+.pfil{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:6px}
+.agi{display:flex;gap:10px;align-items:flex-start;padding:9px 2px;border-top:1px solid var(--line)}.agi:first-of-type{border-top:0}.agi input{width:18px;height:18px;margin-top:2px}
+.agi.done .b{text-decoration:line-through;color:var(--muted)}.agb{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--muted);display:grid;place-items:center;font-size:12px;flex:none;margin-top:2px}.agi.done .agb{background:var(--ok);border-color:var(--ok);color:#fff}
+.cdot{width:9px;height:9px;border-radius:2px;display:inline-block;vertical-align:middle}
+.pbars{display:flex;gap:3px;align-items:flex-end;height:160px;padding-top:6px}.pbw{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;min-width:0}
+.pst{display:flex;flex-direction:column-reverse;min-height:1px;border-radius:3px 3px 0 0;overflow:hidden;background:var(--soft)}.pst i{display:block;min-height:1px}.pbw small{font-size:9.5px;color:var(--muted);text-align:center;white-space:nowrap;height:14px}
+.frow{display:grid;grid-template-columns:130px 1fr 90px;gap:10px;align-items:center;margin:9px 0}.ftr{height:24px;background:var(--soft);border-radius:4px;position:relative}.ftr div{height:100%;border-radius:4px}.ftr b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.pev{display:grid;grid-template-columns:14px 1fr;gap:8px;padding:8px 0;border-top:1px dashed var(--line)}.pev:first-of-type{border-top:0}.pev .cdot{margin-top:4px}
 </style>
 </head>
 <body>
@@ -163,13 +179,15 @@ const ICON={
  preventivos:'<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/>',
  toner:'<path d="M7 3h10v4l2 3v11H5V10l2-3z"/><path d="M5 13h14"/>',
  comercial:'<path d="M3 4h18l-7 9v6l-4 2v-8z"/>',
+ prospectos:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
+ cotiz:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
  mensajes:'<path d="M4 5h16v11H8l-4 4z"/>',
  config:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'
 };
 const svg=n=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]||""}</svg>`;
 
 /* ===================== estado ===================== */
-const S={clientes:new Map(),equipos:new Map(),tickets:new Map(),opps:new Map(),sol:new Map(),inv:new Map(),
+const S={clientes:new Map(),cot:new Map(),empresa:{},tareas:new Map(),crm:null,crmHechos:{},equipos:new Map(),tickets:new Map(),opps:new Map(),sol:new Map(),inv:new Map(),
   usuarios:{},toner:[],contadores:{},me:null,rol:null,owner:false,canWrite:true,ready:{},filters:{}};
 let db=null;
 const ROLES={admin:"Administración",direccion:"Dirección",comercial:"Comercial",atencion:"Atención a clientes",jefe_tecnico:"Jefe técnico",tecnico:"Técnico"};
@@ -178,7 +196,7 @@ const TIPOS=["Correctivo","Preventivo","Instalación","Retiro","Entrega de tóne
 const ETAPAS=[["nuevo","Nuevo"],["contactado","Contactado"],["diagnostico","Diagnóstico / visita"],["propuesta","Propuesta enviada"],["negociacion","Negociación"],["ganado","Ganado"],["perdido","Perdido"]];
 const CHECK=["Página de estado","Alimentador","Cristales","Gomas","Fusor","Limpieza de chasis","Bote residual (vaciar)","Limpieza general de tapas"];
 const FINAL=["Cerrado","Refacciones","Software","Capacitación","Cambio de equipo","Abierto"];
-const EMPRESA={nombre:"OFFICE AUTOMATION S.A. DE C.V.",dir:"Av. de los Reyes 12, MZ 018, Residencial El Dorado, 54020 Tlalnepantla de Baz, Edo. de México",wa:"5627606710",web:"www.officeautomation.com.mx",correo:"servicio@officeautomation.com.mx"};
+const EMPRESA={nombre:"OFFICE AUTOMATION S.A. DE C.V.",dir:"Av. de los Reyes 12, MZ 018, Residencial El Dorado, 54020 Tlalnepantla de Baz, Edo. de México",wa:"5627606710",web:"www.officeautomation.com.mx",correo:"servicio@officeautomation.com.mx",waTxt:"56 2760 6710",rfc:"OAU980713BW3"};
 const PLANTILLAS=[
  {id:"recibido",n:"Ticket recibido",t:"Hola {contacto}, recibimos su reporte del equipo {modelo} (serie {serie}) en {cliente}. Folio {folio}. Compromiso de atención: {compromiso}. Office Automation."},
  {id:"camino",n:"Técnico en camino",t:"Hola {contacto}, {tecnico} va en camino a {cliente} para atender el folio {folio}. Office Automation."},
@@ -231,7 +249,9 @@ const VIEWS=[
  {id:"clientes",n:"Clientes",ok:()=>can("clientes")},
  {id:"equipos",n:"Equipos",ok:()=>can("equipos")||S.rol==="tecnico"},
  {id:"toner",n:"Tóner",ok:()=>can("toner")},
+ {id:"prospectos",n:"Prospectos",ok:()=>can("comercial")},
  {id:"comercial",n:"Comercial",ok:()=>can("comercial")},
+ {id:"cotiz",n:"Cotizaciones",ok:()=>can("comercial")},
  {id:"mensajes",n:"Mensajes",ok:()=>can("servicio")},
  {id:"config",n:"Equipo y accesos",ok:()=>S.owner||S.rol==="admin"}
 ];
@@ -241,13 +261,13 @@ function renderNav(){
   const abiertos=[...S.tickets.values()].filter(t=>t.estado!=="cerrado").length;
   const mine=misTickets().length;
   $("#nav").innerHTML=vs.map(v=>`<a href="#${v.id}" class="${v.id===c?"on":""}">${svg(v.id)}${v.n}${v.id==="servicio"&&abiertos?`<span class="n">${abiertos}</span>`:""}${v.id==="midia"&&mine?`<span class="n">${mine}</span>`:""}</a>`).join("");
-  const mob=S.rol==="tecnico"?["midia","equipos"]:["inicio","servicio","clientes","toner","comercial"];
+  const mob=S.rol==="tecnico"?["midia","equipos"]:["inicio","servicio","clientes","prospectos","comercial"];
   $("#mnav").innerHTML=vs.filter(v=>mob.includes(v.id)).map(v=>`<a href="#${v.id}" class="${v.id===c?"on":""}">${svg(v.id)}${v.n.split(" ")[0]}</a>`).join("");
 }
 function render(){
   if(!S.gateOk){return}
   renderNav();
-  const c=cur();const fn={inicio:vInicio,midia:vMiDia,servicio:vServicio,preventivos:vPrev,clientes:vClientes,equipos:vEquipos,toner:vToner,comercial:vComercial,mensajes:vMensajes,config:vConfig}[c];
+  const c=cur();const fn={inicio:vInicio,midia:vMiDia,servicio:vServicio,preventivos:vPrev,clientes:vClientes,equipos:vEquipos,toner:vToner,comercial:vComercial,cotiz:vCotiz,prospectos:vProspectos,mensajes:vMensajes,config:vConfig}[c];
   const m=$("#main");const st=m.scrollTop;m.innerHTML=fn();m.scrollTop=st;bindView(c);
 }
 window.addEventListener("hashchange",()=>{$("#main").scrollTop=0;render()});
@@ -384,7 +404,7 @@ function vConfig(){
   const U=Object.entries(S.usuarios);
   return header("Equipo y accesos","Cada persona entra con su correo; aquí le asignas su rol y el nombre que verá el equipo.")+
   `<div class="panel" style="margin-bottom:16px"><h2>Agregar persona</h2><p class="muted sm" style="margin-top:0">Primero invítala en Supabase (Authentication → Users → Invite) con su correo; luego dale aquí su rol.</p><div class="row"><input class="f" id="usrid" type="email" placeholder="correo@officeautomation.com.mx" style="flex:1;min-width:220px"><input class="f" id="usrn" placeholder="Nombre que verá el equipo" style="flex:1;min-width:180px"><select class="f" id="usrr">${Object.entries(ROLES).map(([k,n])=>`<option value="${k}">${n}</option>`).join("")}</select><button class="btn pri" data-a="addId">Agregar</button></div></div>
-  <div class="panel wrap"><table class="tbl"><tr><th>Correo</th><th>Nombre en el sistema</th><th>Rol</th><th></th></tr>${U.map(([id,u])=>`<tr><td class="sm">${esc(id)}</td><td><input class="f" value="${esc(u.alias||"")}" data-ualias="${esc(id)}"></td><td><select class="f" data-urol="${esc(id)}">${Object.entries(ROLES).map(([k,n])=>`<option value="${k}" ${u.rol===k?"selected":""}>${n}</option>`).join("")}<option value="" ${!u.rol?"selected":""}>Sin acceso</option></select></td><td><button class="btn sm" data-udel="${esc(id)}">Quitar</button></td></tr>`).join("")||`<tr><td colspan="4" class="empty">Aún no hay personas dadas de alta.</td></tr>`}</table></div>`;
+  <div class="panel wrap"><table class="tbl"><tr><th>Correo</th><th>Nombre en el sistema</th><th>Rol</th><th></th></tr>${U.map(([id,u])=>`<tr><td class="sm">${esc(id)}</td><td><input class="f" value="${esc(u.alias||"")}" data-ualias="${esc(id)}"></td><td><select class="f" data-urol="${esc(id)}">${Object.entries(ROLES).map(([k,n])=>`<option value="${k}" ${u.rol===k?"selected":""}>${n}</option>`).join("")}<option value="" ${!u.rol?"selected":""}>Sin acceso</option></select></td><td><button class="btn sm" data-udel="${esc(id)}">Quitar</button></td></tr>`).join("")||`<tr><td colspan="4" class="empty">Aún no hay personas dadas de alta.</td></tr>`}</table></div>`+empresaPanel();
 }
 
 /* ===================== fichas (drawer) ===================== */
@@ -448,7 +468,7 @@ function openTicket(id){
    <label class="fl">Prioridad<select class="f" data-tf="prioridad" ${w?"":"disabled"}>${["Normal","Alta","Crítica"].map(x=>`<option ${t.prioridad===x?"selected":""}>${x}</option>`).join("")}</select></label>
    <label class="fl full">Descripción del problema<textarea class="f" data-tf="desc" ${w?"":"disabled"}>${esc(t.desc||"")}</textarea></label></div></div>
   <div class="panel" style="margin-top:14px"><h2>Reporte de servicio</h2>
-   <div class="form"><label class="fl">Contador inicial<input class="f" inputmode="numeric" data-tf="ci" value="${esc(t.ci||"")}" ${w?"":"disabled"}></label><label class="fl">Contador final<input class="f" inputmode="numeric" data-tf="cf" value="${esc(t.cf||"")}" ${w?"":"disabled"}></label></div>
+   <div class="form"><label class="fl">Contador inicial<input class="f" inputmode="numeric" data-tf="ci" value="${esc(t.ci||"")}" ${w?"":"disabled"}></label><label class="fl">Contador final<input class="f" inputmode="numeric" data-tf="cf" value="${esc(t.cf||"")}" ${w?"":"disabled"}></label><label class="fl">Bonificar (páginas)<input class="f" inputmode="numeric" data-tf="bonificar" value="${esc(t.bonificar||"")}" ${w?"":"disabled"}></label></div>
    <div class="muted sm b" style="margin:14px 0 8px">Check list preventivo</div>
    <div class="chk">${CHECK.map((x,i)=>`<label><input type="checkbox" data-chk="${i}" ${(t.checklist||{})[i]?"checked":""} ${w?"":"disabled"}>${x}</label>`).join("")}</div>
    <div class="form" style="margin-top:12px"><label class="fl full">Acciones realizadas y comentarios<textarea class="f" data-tf="acciones" ${w?"":"disabled"}>${esc(t.acciones||"")}</textarea></label>
@@ -463,7 +483,8 @@ function openTicket(id){
    ${w?`<div class="row" style="margin-top:16px"><button class="btn pri" data-a="saveTk" data-id="${esc(id)}">Guardar</button><button class="btn" data-a="closeTk" data-id="${esc(id)}">Guardar y cerrar servicio</button><button class="btn" data-a="pdfTk" data-id="${esc(id)}">Reporte PDF</button></div>`:`<div class="row" style="margin-top:16px"><button class="btn" data-a="pdfTk" data-id="${esc(id)}">Reporte PDF</button></div>`}
   </div>
   <div class="panel" style="margin-top:14px"><h2>Avisar al cliente por WhatsApp</h2><div class="row">${["recibido","camino","cerrado"].map(k=>{const p=PLANTILLAS.find(x=>x.id===k);return tel?`<a class="btn wa sm" target="_blank" rel="noopener" href="${waLink(tel,fillTpl(p,t))}">${esc(p.n)}</a>`:""}).join("")||`<span class="muted sm">Agrega un teléfono al ticket o un contacto al cliente para enviar avisos.</span>`}</div></div>
-  <div class="panel" style="margin-top:14px"><h2>Historial</h2>${(t.hist||[]).slice().reverse().map(h=>`<div class="sm"><span class="muted">${fdt(h.t)}</span> · ${esc(h.ev)} <span class="muted">(${esc(nombreDe(h.por)||"")})</span></div>`).join("")}</div>`,L=>{bindCommon(L);setupSig(L)});
+  <div class="panel" style="margin-top:14px"><h2>Historial</h2>${(t.hist||[]).slice().reverse().map(h=>`<div class="sm"><span class="muted">${fdt(h.t)}</span> · ${esc(h.ev)} <span class="muted">(${esc(nombreDe(h.por)||"")})</span></div>`).join("")}</div>
+  ${S.rol==="admin"?`<div class="row" style="margin-top:14px"><button class="btn sm" data-a="delTk" data-id="${esc(id)}" style="color:var(--bad)">Eliminar ticket</button><span class="muted sm">Solo para pruebas o duplicados. No se puede deshacer.</span></div>`:""}`,L=>{bindCommon(L);setupSig(L)});
 }
 let sigDirty=false;
 function setupSig(L){const c=L.querySelector("#sig");if(!c)return;sigDirty=false;const r=c.getBoundingClientRect();c.width=r.width*2;c.height=r.height*2;const x=c.getContext("2d");x.scale(2,2);x.lineWidth=2.2;x.lineCap="round";x.strokeStyle="#16263D";let dn=false;
@@ -500,53 +521,172 @@ function bindPicker(L){const q=L.querySelector("#eqq");if(!q)return;const res=L.
    res.querySelectorAll("[data-pick]").forEach(x=>x.onclick=()=>{const e=S.equipos.get(x.dataset.pick);L.querySelector("#tk_eq").value=e._id;L.querySelector("#tk_cli").value=e.clienteId;L.querySelector("#tk_sel").innerHTML=`<b>${esc(e.cliente)}</b> · ${esc(e.modelo)} · ${esc(e.ubicacion)}`;res.innerHTML="";q.value=e.serie});
    res.querySelectorAll("[data-pickc]").forEach(x=>x.onclick=()=>{const c=S.clientes.get(x.dataset.pickc);L.querySelector("#tk_eq").value="";L.querySelector("#tk_cli").value=c._id;L.querySelector("#tk_sel").innerHTML=`<b>${esc(c.nombre)}</b> (sin equipo específico)`;res.innerHTML="";q.value=c.nombre})};
   q.addEventListener("input",run);if(q.value&&!L.querySelector("#tk_eq").value)run()}
-async function folio(pref){
-  const ref=db.doc("config/contadores");const snap=await ref.get();const d=snap.exists?snap.data():{};const n=(d[pref]||0)+1;
-  if(snap.exists)await ref.update({[pref]:n});else await ref.set({[pref]:n});return pref+"-"+String(n).padStart(4,"0")}
+async function folio(pref){ // atómico en la base de datos (06_seguridad.sql)
+  const {data,error}=await sb.rpc("oa_folio",{p_pref:pref});if(error){onWriteErr(error);throw error}return data}
 const hist=(t,ev)=>({...t,hist:[...(t.hist||[]),{t:Date.now(),ev,por:S.me?.id||""}]});
 async function save(path,data,msg){try{await db.doc(path).set(data);msg&&toast(msg);return true}catch(e){onWriteErr(e);return false}}
 async function upd(path,data,msg){try{await db.doc(path).update(data);msg&&toast(msg);return true}catch(e){onWriteErr(e);return false}}
-function onWriteErr(e){if(e&&e.code==="invalid_argument"&&S.canWrite==null){S.canWrite=false;toast("Tu acceso es de solo lectura.");render()}else toast("No se pudo guardar: "+(e?.message||e?.code||"error"))}
+function onWriteErr(e){if(e&&e.code==="invalid_argument"&&S.canWrite==null){S.canWrite=false;toast("Tu acceso es de solo lectura.");render()}else if(e&&e.code==="42501")toast("No tienes permiso para este cambio.");else toast("No se pudo guardar: "+(e?.message||e?.code||"error"))}
 
 /* ===================== PDF ===================== */
 async function savePdf(doc,name){
   doc.save(name);toast("PDF descargado");
 }
-function pdfHeader(d,title,folioTxt){
-  const C=[[0,174,239],[236,0,140],[255,212,0],[26,26,26]];C.forEach((c,i)=>{d.setFillColor(...c);d.rect(14+(i%2)*5,12+Math.floor(i/2)*5,4.2,4.2,"F")});
-  d.setFont("helvetica","bold");d.setFontSize(12);d.setTextColor(22,38,61);d.text("OFFICE AUTOMATION",26,17);d.setFontSize(15);d.text(title,128,17,{align:"center"});
-  d.setFontSize(9);d.text("OASA",196,13,{align:"right"});d.setFont("helvetica","normal");d.text(folioTxt,196,18,{align:"right"});
-  d.setDrawColor(22,38,61);d.setLineWidth(.4);d.line(14,23,196,23)}
-function box(d,y,title,rows,h){d.setFillColor(220,230,242);d.rect(14,y,182,6,"F");d.setFont("helvetica","bold");d.setFontSize(9);d.setTextColor(22,38,61);d.text(title,105,y+4.2,{align:"center"});d.setDrawColor(150);d.rect(14,y,182,h);d.setFont("helvetica","normal");let yy=y+11;rows.forEach(r=>{d.setFont("helvetica","bold");d.text(r[0],17,yy);d.setFont("helvetica","normal");const l=d.splitTextToSize(String(r[1]||"—"),140);d.text(l,52,yy);yy+=5*Math.max(1,l.length)});return y+h+4}
+const EMP=()=>({...EMPRESA,...(S.empresa||{})});
+const LOGO=k=>(window.OA_LOGOS||{})[k];
+const f2=n=>String(n).padStart(2,"0");
+const fFecha=t=>{if(!t)return"";const d=cdmx(t);return f2(d.getUTCDate())+"/"+f2(d.getUTCMonth()+1)+"/"+d.getUTCFullYear()};
+const fHora=t=>{if(!t)return"";const d=cdmx(t);return f2(d.getUTCHours())+":"+f2(d.getUTCMinutes())};
+const mxn=n=>"$"+(Number(n)||0).toLocaleString("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2});
+const BAR=[220,230,242],NAVY=[22,38,61];
+// celda con borde y texto (alineación: l, c, r)
+function cell(d,x,y,w,h,txt,o={}){if(o.fill){d.setFillColor(...o.fill);d.rect(x,y,w,h,"F")}d.setDrawColor(120);d.setLineWidth(.2);d.rect(x,y,w,h);if(txt===undefined||txt==="")return;
+  d.setFont("helvetica",o.b?"bold":"normal");d.setFontSize(o.s||8);d.setTextColor(...(o.col||NAVY));const al=o.a||"l";const tx=al==="c"?x+w/2:al==="r"?x+w-1.5:x+1.5;
+  const l=d.splitTextToSize(String(txt),w-3).slice(0,o.max||1);const lh=(o.s||8)*.41;d.text(l,tx,y+(o.top?3.6:h/2+1.1-(l.length-1)*lh/2),{align:al==="c"?"center":al==="r"?"right":"left"})}
+function pdfFooter(d){const E=EMP();if(LOGO("konica"))d.addImage(LOGO("konica"),"JPEG",14,248,20,15.4);if(LOGO("kyocera"))d.addImage(LOGO("kyocera"),"JPEG",172,252,30,12);
+  d.setFont("helvetica","normal");d.setFontSize(8.5);d.setTextColor(27,94,150);d.text(E.web,108,254,{align:"center"});d.setTextColor(...NAVY);d.text("WhatsApp "+E.waTxt,108,259,{align:"center"})}
+
+/* Reporte de servicio: mismo formato que el «REPORTE OASA» oficial */
 function pdfTicket(t){
-  const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"mm",format:"letter"});pdfHeader(d,"REPORTE DE SERVICIO","# ticket: "+t.folio);
-  const c=S.clientes.get(t.clienteId)||{};
-  let y=28;y=box(d,y,"Cliente atendido",[["Cliente",t.cliente],["Dirección",t.ubicacion||c.municipio||""],["Reportado por",(t.reportadoPor||"")+(t.depto?" · "+t.depto:"")],["Tipo de servicio",t.tipo],["Técnico",nombreDe(t.tecnicoId)]],36);
-  y=box(d,y,"Equipo",[["Modelo",t.modelo],["Número de serie",t.serie],["Contadores","Inicial "+(t.ci||"—")+"   ·   Final "+(t.cf||"—")]],24);
-  y=box(d,y,"Atención",[["Reporte",fdt(t.creado)],["Inicio",fdt(t.inicio)],["Fin",fdt(t.fin)],["Estatus final",t.estatusFinal||t.estado]],29);
-  const dl=d.splitTextToSize(t.desc||"—",172).slice(0,6);const dh=10+dl.length*5;d.setFillColor(220,230,242);d.rect(14,y,182,6,"F");d.setFont("helvetica","bold");d.text("Descripción del problema",105,y+4.2,{align:"center"});d.rect(14,y,182,dh);d.setFont("helvetica","normal");d.text(dl,17,y+11);y+=dh+4;
-  d.setFillColor(220,230,242);d.rect(14,y,182,6,"F");d.setFont("helvetica","bold");d.text("Check list preventivo",55,y+4.2,{align:"center"});d.text("Acciones realizadas y/o comentarios",150,y+4.2,{align:"center"});
-  d.rect(14,y,182,52);d.line(96,y,96,y+52);d.setFont("helvetica","normal");CHECK.forEach((x,i)=>{const on=(t.checklist||{})[i];d.rect(18,y+9+i*5.3,3,3);if(on){d.setFont("helvetica","bold");d.text("x",18.6,y+11.6+i*5.3);d.setFont("helvetica","normal")}d.text(x,24,y+11.5+i*5.3)});
-  d.text(d.splitTextToSize((t.acciones||"")+(t.refacciones?"\nRefacciones: "+t.refacciones:""),95).slice(0,9),99,y+11);y+=56;
-  d.setFillColor(220,230,242);d.rect(14,y,182,6,"F");d.setFont("helvetica","bold");d.text("Calificación del servicio: "+(t.calif||"—"),105,y+4.2,{align:"center"});y+=10;
-  d.rect(14,y,90,34);d.rect(106,y,90,34);d.text("NOMBRE Y FIRMA CLIENTE",59,y+4.5,{align:"center"});d.text("NOMBRE Y FIRMA TÉCNICO",151,y+4.5,{align:"center"});
-  if(t.firma){try{d.addImage(t.firma,"PNG",30,y+6,58,20)}catch(e){}}d.setFont("helvetica","normal");d.text(t.firmaNombre||"",59,y+31,{align:"center"});d.text(nombreDe(t.tecnicoId),151,y+31,{align:"center"});
-  d.setFontSize(8);d.setTextColor(90);d.text(EMPRESA.web+"  ·  WhatsApp 55-6015-5063",105,270,{align:"center"});
-  savePdf(d,"Reporte_"+t.folio+".pdf");
+  const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"mm",format:"letter"});const c=S.clientes.get(t.clienteId)||{};
+  // encabezado
+  d.setDrawColor(120);d.setLineWidth(.2);d.rect(14,10,188,16);d.line(64,10,64,26);d.line(152,10,152,26);
+  if(LOGO("oa"))d.addImage(LOGO("oa"),"JPEG",17,13.5,44,9.5);
+  d.setFont("helvetica","bold");d.setFontSize(13);d.setTextColor(...NAVY);d.text("REPORTE DE SERVICIO",108,19.5,{align:"center"});
+  d.setFontSize(8);d.text("OASA",177,14,{align:"center"});d.line(152,15.5,202,15.5);d.setFont("helvetica","normal");d.text("# ticket: "+(t.folio||""),154,19.8);d.line(152,21.5,202,21.5);d.setFontSize(7);d.text("Página 1 de 1",177,24.8,{align:"center"});
+  // cliente atendido
+  let y=30;cell(d,14,y,188,5,"Cliente atendido",{fill:BAR,b:1,a:"c"});y+=5;
+  const fila=(et,v)=>{cell(d,14,y,188,5,"");d.setFont("helvetica","normal");d.setFontSize(8);d.text(et,15.5,y+3.6);d.setFont("helvetica","bold");d.text(d.splitTextToSize(String(v||""),150)[0]||"",50,y+3.6);y+=5};
+  fila("Cliente",t.cliente);fila("Dirección",t.ubicacion||"");fila("Municipio/Estado",c.municipio||"");
+  cell(d,14,y,94,5,"");cell(d,108,y,94,5,"");d.setFont("helvetica","normal");d.text("Reportado por",15.5,y+3.6);d.text("Departamento",109.5,y+3.6);d.setFont("helvetica","bold");d.text(String(t.reportadoPor||"").slice(0,40),40,y+3.6);d.text(String(t.depto||"").slice(0,40),132,y+3.6);y+=5;
+  cell(d,14,y,22,5,"Tipo de servicio");const tipo=(t.tipo||"").toUpperCase();
+  [["PREVENTIVO",36],["CORRECTIVO",60],["INSTALACIÓN",84]].forEach(([k,x])=>cell(d,x,y,24,5,k,{b:1,a:"c",s:7,fill:tipo===k?[255,212,0]:null}));
+  cell(d,108,y,94,5,"");d.setFont("helvetica","normal");d.setFontSize(8);d.text("Técnico",109.5,y+3.6);d.setFont("helvetica","bold");d.text(nombreDe(t.tecnicoId),132,y+3.6);y+=5;
+  const cols=[[14,40,"Modelo"],[54,54,"Número de serie"],[108,27,"Contador\nInicial"],[135,27,"Contador\nFinal"],[162,40,"Bonificar"]];
+  cols.forEach(([x,w,h])=>{cell(d,x,y,w,8,"",{fill:BAR});d.setFont("helvetica","bold");d.setFontSize(8);d.text(h.split("\n"),x+w/2,y+(h.includes("\n")?3.4:5),{align:"center"})});y+=8;
+  [[t.modelo],[t.serie],[t.ci],[t.cf],[t.bonificar]].forEach((v,i)=>cell(d,cols[i][0],y,cols[i][1],7,v[0]||"",{a:"c",max:2,s:7.5}));y+=7;
+  // atención
+  y+=4;cell(d,14,y,44,5,"Inicio de atención",{fill:BAR,b:1,a:"c"});cell(d,58,y,44,5,"Fin de atención",{fill:BAR,b:1,a:"c"});cell(d,102,y,100,5,"Estatus final",{fill:BAR,b:1,a:"c"});y+=5;
+  ["Fecha","Hora","Fecha","Hora"].forEach((h,i)=>cell(d,14+i*22,y,22,5,h,{fill:BAR,b:1,a:"c"}));
+  const ef=(t.estatusFinal||(t.estado==="cerrado"?"Cerrado":"Abierto")).toUpperCase();
+  const est=[["ABIERTO","CERRADO","REFACCIONES"],["SOFTWARE","CAPACITACIÓN","CAMBIO DE EQUIPO"]];
+  est[0].forEach((k,i)=>cell(d,102+i*100/3,y,100/3,5,k,{a:"c",s:7,b:ef===k,fill:ef===k?[255,212,0]:null}));y+=5;
+  [fFecha(t.inicio),fHora(t.inicio),fFecha(t.fin),fHora(t.fin)].forEach((v,i)=>cell(d,14+i*22,y,22,5,v,{a:"c"}));
+  est[1].forEach((k,i)=>cell(d,102+i*100/3,y,100/3,5,k==="CAMBIO DE EQUIPO"?"CAMBIO EQUIPO":k,{a:"c",s:7,b:ef===k,fill:ef===k?[255,212,0]:null}));y+=5;
+  // descripción
+  y+=4;cell(d,14,y,188,5,"Descripción del problema",{fill:BAR,b:1,a:"c"});y+=5;cell(d,14,y,188,16,t.desc||"",{top:1,max:4});y+=16;
+  // checklist y acciones
+  y+=4;cell(d,14,y,82,5,"Check list Preventivo",{fill:BAR,b:1,a:"c"});cell(d,96,y,106,5,"Acciones realizadas y/o comentarios",{fill:BAR,b:1,a:"c"});y+=5;
+  cell(d,14,y,82,50,"");cell(d,96,y,106,50,"");d.setFontSize(10);
+  CHECK.forEach((x,i)=>{const yy=y+6+i*5.8;const on=(t.checklist||{})[i];d.setDrawColor(90);d.circle(19,yy-1.2,1.2);if(on){d.setFillColor(...NAVY);d.circle(19,yy-1.2,.8,"F")}d.setFont("helvetica","normal");d.setTextColor(...NAVY);d.text(x,23,yy)});
+  d.setFontSize(8.5);d.text(d.splitTextToSize((t.acciones||"")+(t.refacciones?"\n\nRefacciones: "+t.refacciones:""),101).slice(0,11),98,y+5);y+=50;
+  // calificación
+  y+=4;cell(d,14,y,188,5,"Nos interesa su opinión, califique nuestro servicio",{fill:BAR,b:1,a:"c"});y+=5;const cal=(t.calif||"").toUpperCase();
+  ["EXCELENTE","BUENO","REGULAR","MALO"].forEach((k,i)=>{cell(d,14+i*47,y,47,4.5,k,{b:1,a:"c",s:7.5});cell(d,14+i*47,y+4.5,47,4.5,"");d.rect(14+i*47+22,y+5.3,3,3);if(cal===k){d.setFont("helvetica","bold");d.setFontSize(9);d.text("X",14+i*47+23.5,y+7.9,{align:"center"})}});y+=9;
+  // firmas
+  y+=4;cell(d,14,y,94,5,"NOMBRE Y FIRMA CLIENTE",{fill:BAR,b:1,a:"c",s:7.5});cell(d,108,y,94,5,"NOMBRE Y FIRMA TÉCNICO",{fill:BAR,b:1,a:"c",s:7.5});y+=5;cell(d,14,y,94,24,"");cell(d,108,y,94,24,"");
+  if(t.firma){try{d.addImage(t.firma,"PNG",36,y+1.5,50,16)}catch(e){}}d.setFont("helvetica","normal");d.setFontSize(8.5);d.text(t.firmaNombre||"",61,y+21.5,{align:"center"});d.text(nombreDe(t.tecnicoId),155,y+21.5,{align:"center"});
+  pdfFooter(d);savePdf(d,"Reporte_"+t.folio+".pdf");
 }
+
+/* Vale de salida de tóner: mismo formato que «SALIDA DE TÓNER» oficial */
 function pdfVale(s){
-  const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"mm",format:"letter"});pdfHeader(d,"ENTREGA DE SUMINISTRO","FOLIO: "+s.folio);
-  d.setFontSize(10);d.setFont("helvetica","bold");d.text("CLIENTE: ",14,34);d.setFont("helvetica","normal");d.text(String(s.cliente||""),34,34);
-  d.setFont("helvetica","bold");d.text("SOLICITANTE: ",14,40);d.setFont("helvetica","normal");d.text(String(s.solicitante||""),42,40);d.text("Fecha: "+fd(s.fecha),196,34,{align:"right"});
-  let y=48;d.setFillColor(220,230,242);d.rect(14,y,182,7,"F");d.setFont("helvetica","bold");[["ITEM",17],["MODELO DE EQUIPO",80],["CANTIDAD",170]].forEach(([h,x])=>d.text(h,x,y+5));y+=7;d.setFont("helvetica","normal");let tot=0;
-  (s.partidas||[]).forEach(p=>{d.rect(14,y,182,7);d.text(String(p.toner),17,y+5);d.text(String(p.impresora||""),80,y+5);d.text(String(p.cant),175,y+5);tot+=+p.cant||0;y+=7});
-  d.setFont("helvetica","bold");d.text("TOTAL",150,y+5);d.text(String(tot),175,y+5);y+=24;d.line(30,y,100,y);d.line(115,y,185,y);d.setFont("helvetica","normal");d.text("Entrega (Office Automation)",65,y+5,{align:"center"});d.text("Nombre y firma de quien recibe",150,y+5,{align:"center"});
-  d.setFontSize(8);d.setTextColor(90);d.text(EMPRESA.nombre+" · "+EMPRESA.dir,105,270,{align:"center"});
+  const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"mm",format:"letter"});const c=S.clientes.get(s.clienteId)||{};
+  const dom=s.domicilio||c.municipio||([...S.equipos.values()].find(e=>e.clienteId===s.clienteId&&e.estatus==="instalado")||{}).ubicacion||"";
+  if(LOGO("oa"))d.addImage(LOGO("oa"),"JPEG",18,14,104,22.4);
+  d.setTextColor(...NAVY);d.setFont("helvetica","bold");d.setFontSize(11);d.text("FOLIO: "+(s.folio||""),196,52,{align:"right"});
+  d.setFont("helvetica","normal");d.setFontSize(9);d.text("Fecha: "+fFecha(s.fecha),196,58,{align:"right"});
+  d.setFont("helvetica","bold");d.setFontSize(11);d.text("ENTREGA SUMINISTRO",108,68,{align:"center"});
+  const linea=(et,v,yy)=>{d.setFont("helvetica","bold");d.text(et,18,yy);const w=d.getTextWidth(et)+1.5;d.setFont("helvetica","normal");const tv=d.splitTextToSize(String(v||""),170-w)[0]||"";d.text(tv,18+w,yy);d.setLineWidth(.2);d.line(18+w,yy+.8,18+w+d.getTextWidth(tv),yy+.8)};
+  linea("CLIENTE: ",s.cliente,80);linea("DOMICILIO: ",dom,88);if(s.solicitante)linea("SOLICITANTE: ",s.solicitante,96);
+  let y=s.solicitante?104:98;const C=[[18,30,"NO. DE PARTE"],[48,36,"ITEM"],[84,28,"SERIE"],[112,60,"MODELO"],[172,26,"CANTIDAD"]];
+  C.forEach(([x,w,h])=>cell(d,x,y,w,6,h,{b:1,s:7.5,a:h==="CANTIDAD"?"c":"l"}));y+=6;let tot=0;
+  (s.partidas||[]).forEach(p=>{const v=[p.parte||"",p.toner,p.serie||"Stock",p.impresora||"",p.cant];C.forEach(([x,w],i)=>cell(d,x,y,w,6,v[i],{s:8,a:i===4?"c":"l",b:i===2}));tot+=+p.cant||0;y+=6;if(y>235){d.addPage();y=20}});
+  cell(d,18,y,94,6,"");cell(d,112,y,60,6,"TOTAL",{b:1,s:8});cell(d,172,y,26,6,tot,{b:1,a:"c"});y+=6;
+  d.rect(18,y,64,26);d.setFont("helvetica","bold");d.setFontSize(11);d.text("Nombre y Firma",20,y+23);
+  d.setFont("helvetica","normal");d.setFontSize(7.5);d.setTextColor(90);d.text(EMP().nombre+" · "+EMP().dir,108,268,{align:"center"});
   savePdf(d,"Vale_"+s.folio+".pdf");
 }
 
+/* Cotización (formato de cotización de mantenimiento / general) */
+function pdfCot(q){
+  const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"mm",format:"letter"});const E=EMP();
+  const marcas=q.marcas||{};
+  if(marcas.konica&&LOGO("konica"))d.addImage(LOGO("konica"),"JPEG",14,10,30,23.2);
+  if(LOGO("oa"))d.addImage(LOGO("oa"),"JPEG",marcas.konica||marcas.kyocera?66:14,14,72,15.5);
+  if(marcas.kyocera&&LOGO("kyocera"))d.addImage(LOGO("kyocera"),"JPEG",152,12,50,19.9);
+  d.setTextColor(...NAVY);d.setFont("helvetica","bold");d.setFontSize(10);d.text("Folio: "+(q.folio||""),202,42,{align:"right"});d.text("Fecha: "+fFecha(q.fecha),202,47.5,{align:"right"});
+  d.setFont("helvetica","normal");d.setFontSize(12);d.text(String(q.empresa||""),14,58);d.setFontSize(10.5);
+  let y=66;if(q.atencion){d.text("Atención a: "+q.atencion,14,y);y+=5.5}
+  if(q.asunto){d.text(d.splitTextToSize(q.asunto,188),14,y);y+=5.5*d.splitTextToSize(q.asunto,188).length}
+  y+=4;const C=[[14,22,"CANTIDAD"],[36,98,"DESCRIPCIÓN DEL PRODUCTO"],[134,36,"PRECIO UNITARIO"],[170,32,"IMPORTE"]];
+  C.forEach(([x,w,h])=>cell(d,x,y,w,7,h,{a:"c",s:7.5,b:1,fill:BAR}));y+=7;let sub=0;
+  (q.partidas||[]).filter(p=>p.desc||p.precio).forEach(p=>{const imp=(+p.cant||0)*(+p.precio||0);sub+=imp;d.setFont("helvetica","normal");d.setFontSize(8.5);
+    const l=d.splitTextToSize(String(p.desc||""),94);const h=Math.max(8,l.length*4+4);if(y+h>235){d.addPage();y=20}
+    C.forEach(([x,w])=>d.rect(x,y,w,h));d.setTextColor(...NAVY);d.text(String(p.cant||""),25,y+h/2+1,{align:"center"});d.text(l,38,y+5);d.text(mxn(p.precio),152,y+h/2+1,{align:"center"});d.text(mxn(imp),186,y+h/2+1,{align:"center"});y+=h});
+  const iva=q.sinIva?0:Math.round(sub*16)/100;
+  [["SUBTOTAL",sub],["I.V.A. 16%",iva],["TOTAL",sub+iva]].forEach(([k,v],i)=>{cell(d,14,y,22,6,"");cell(d,36,y,98,6,"");cell(d,134,y,36,6,k,{a:"c",b:i===2});cell(d,170,y,32,6,mxn(v),{a:"c",b:i===2});y+=6});
+  if(q.notas){y+=6;d.setFont("helvetica","normal");d.setFontSize(9);const l=d.splitTextToSize(q.notas,188);if(y+l.length*4.2>240){d.addPage();y=20}d.text(l,14,y);y+=l.length*4.2}
+  if(q.banco){const rows=[["Nombre fiscal",E.nombre],["RFC",E.rfc],["Dirección fiscal",E.dirFiscal||E.dir],["Teléfono",E.tel||("WhatsApp "+E.waTxt)],["Contacto de facturación",E.facContacto],["Correo",E.facCorreo],["Banco",E.banco],["Cuenta",E.cuenta],["CLABE",E.clabe],["Sucursal",E.sucursal]].filter(r=>r[1]);
+    y+=6;if(y+8+rows.length*6>245){d.addPage();y=20}cell(d,14,y,188,6,"DATOS DE LA EMPRESA Y CUENTA BANCARIA",{fill:BAR,b:1,a:"c"});y+=6;rows.forEach(([k,v])=>{cell(d,14,y,60,6,k,{b:1});cell(d,74,y,128,6,v);y+=6})}
+  y+=10;if(y>245){d.addPage();y=30}d.setFont("helvetica","normal");d.setFontSize(10);d.text("Atentamente.",14,y);d.setFont("helvetica","bold");d.text(E.nombre,14,y+6);if(q.firma){d.setFont("helvetica","normal");d.text(q.firma,14,y+11.5)}
+  const n=d.getNumberOfPages();for(let i=1;i<=n;i++){d.setPage(i);d.setFont("helvetica","bold");d.setFontSize(10);d.setTextColor(...NAVY);d.text(E.nombre,108,262,{align:"center"});d.setFont("helvetica","normal");d.setFontSize(7.5);d.text(E.dir+" · WhatsApp "+E.waTxt+" · "+E.correo,108,267,{align:"center",maxWidth:188})}
+  savePdf(d,"Cotizacion_"+q.folio+".pdf");
+}
+
+/* Propuesta de arrendamiento (presentación de 5 láminas) */
+function pdfArr(q){
+  const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"pt",format:[959.76,540],orientation:"landscape"});const E=EMP();
+  const W=959.76,DK=[23,40,62],TEAL=[58,175,201],BLUE=[27,94,150],LT=[243,246,249],GR=[91,107,127];
+  const color=!!q.color,plazo=+q.plazo||24,est=q.estadoEq||"seminuevo";
+  const bg=c=>{d.setFillColor(...c);d.rect(0,0,W,540,"F")};
+  const foot=(n,dark)=>{d.setFont("helvetica","bold");d.setFontSize(6.5);d.setTextColor(...(dark?[150,165,185]:GR));d.text("OFFICE AUTOMATION  |  SOLUCIONES DE IMPRESIÓN",36,522);d.text(f2(n),W-36,522,{align:"right"})};
+  const head=(lab,tit,sub,dark)=>{d.setFont("helvetica","bold");d.setFontSize(8);d.setTextColor(...(dark?TEAL:BLUE));d.text(lab,40,40);d.setFontSize(24);d.setTextColor(...(dark?[255,255,255]:DK));d.text(tit,40,82);if(sub){d.setFont("helvetica","normal");d.setFontSize(10);d.setTextColor(...GR);d.text(sub,42,108)}};
+  const card=(x,y,w,h,fill)=>{d.setFillColor(214,221,230);d.roundedRect(x+2,y+3,w,h,10,10,"F");d.setFillColor(...(fill||[255,255,255]));d.roundedRect(x,y,w,h,10,10,"F")};
+  // 1 portada
+  bg(DK);d.setFillColor(...TEAL);d.rect(0,0,10,540,"F");
+  d.setFont("helvetica","bold");d.setFontSize(11);d.setTextColor(...TEAL);d.text("Office Automation – "+(q.empresa||""),48,58,{maxWidth:520});
+  d.setFontSize(30);d.setTextColor(255,255,255);d.text(["Propuesta comercial","de arrendamiento"],48,118);
+  d.setFontSize(20);d.text(String(q.modelo||""),48,228,{maxWidth:520});
+  d.setFont("helvetica","normal");d.setFontSize(11);d.setTextColor(200,210,222);d.text(`Equipo ${est}  ·  Renta${(+q.clicBN||+q.clicColor)?" + costo por clic":""}`,48,256);
+  d.setFillColor(...BLUE);d.roundedRect(48,300,200,48,6,6,"F");d.setFont("helvetica","bold");d.setFontSize(12);d.setTextColor(255,255,255);d.text(plazo+" meses de contrato",148,329,{align:"center"});
+  d.setFillColor(255,255,255);d.roundedRect(600,130,310,230,12,12,"F");if(LOGO("oa"))d.addImage(LOGO("oa"),"JPEG",625,160,260,56);
+  d.setTextColor(...DK);d.setFont("helvetica","normal");d.setFontSize(10);let yy=255;
+  [q.atencion?"Atención: "+q.atencion:"","Folio: "+(q.folio||""),"Fecha: "+fFecha(q.fecha),"WhatsApp "+E.waTxt].filter(Boolean).forEach(x=>{d.text(x,625,yy);yy+=19});foot(1,true);
+  // 2 la solución
+  d.addPage();bg(LT);head("01  |  LA SOLUCIÓN","Un equipo para las necesidades de su empresa",`Multifuncional ${color?"a color":"blanco y negro"} ${est} con soporte técnico y consumibles incluidos.`);
+  const feats=[[(q.ppm||"—")+" ppm","Velocidad de impresión","Rendimiento para el trabajo diario"],
+    q.formato==="A3"?["A3","Formato doble carta","Flexibilidad para documentos grandes"]:["CARTA","Formato carta y oficio","Ideal para el documento de oficina"],
+    q.duplex===false?["SIMPLEX","Impresión a una cara","Operación sencilla"]:["DÚPLEX","Impresión a doble cara","Ahorro de papel y practicidad"],
+    color?["COLOR","Impresión y escaneo","Funciones integradas en un solo equipo"]:["B/N","Impresión y escaneo","Bajo costo por página"]];
+  feats.forEach((f,i)=>{const x=i%2?522:42,y=140+Math.floor(i/2)*125;card(x,y,392,92);d.setFont("helvetica","bold");d.setFontSize(15);d.setTextColor(...BLUE);d.text(f[0],x+18,y+38);d.setFontSize(12);d.setTextColor(...DK);d.text(f[1],x+120,y+32);d.setFont("helvetica","normal");d.setFontSize(8.5);d.setTextColor(...GR);d.text(f[2],x+120,y+58)});
+  d.setFontSize(8.5);d.text(`Modelo: ${q.modelo||""}  |  Estado: ${est}, sujeto a revisión técnica y disponibilidad.`,56,420);foot(2);
+  // 3 propuesta económica
+  d.addPage();bg(LT);head("02  |  PROPUESTA ECONÓMICA","Un esquema claro: renta mensual + costo por impresión",`Plazo contractual de ${plazo} meses. Todos los precios indicados son más IVA.`);
+  card(42,150,300,210,DK);d.setFont("helvetica","bold");d.setFontSize(8);d.setTextColor(...TEAL);d.text("RENTA MENSUAL",64,190);d.setFontSize(32);d.setTextColor(255,255,255);d.text(money(q.renta),64,240);
+  d.setFontSize(8);d.text("MXN + IVA",66,268);d.setDrawColor(...TEAL);d.setLineWidth(1);d.line(64,300,320,300);d.setFontSize(10.5);d.text("Contrato de "+plazo+" meses",64,330);
+  const clic=(x,fill,lab,labc,precio,inc)=>{card(x,165,250,175,fill);d.setFont("helvetica","bold");d.setFontSize(8);d.setTextColor(...labc);d.text(lab,x+22,200);d.setFontSize(22);d.setTextColor(...DK);d.text(mxn(precio).replace(/\.00$/,".00"),x+22,240);
+    d.setFont("helvetica","normal");d.setFontSize(8);d.setTextColor(...GR);d.text("por clic + IVA",x+22,258);d.setFont("helvetica","bold");d.setFontSize(9.5);d.setTextColor(...DK);d.text(+inc?`Incluye ${fmt(inc)} páginas al mes`:"Sin páginas incluidas",x+22,295)};
+  clic(372,[228,239,249],"BLANCO Y NEGRO",BLUE,q.clicBN,q.incBN);if(color)clic(652,[230,245,240],"A COLOR",[15,138,95],q.clicColor,q.incColor);
+  d.setFont("helvetica","normal");d.setFontSize(8.5);d.setTextColor(...GR);d.text(`La renta mensual se factura por separado del consumo. ${+q.incBN||+q.incColor?"Las páginas que excedan lo incluido":"Todas las impresiones"} se cobran según el contador del equipo y la tarifa correspondiente.`,56,420,{maxWidth:850});foot(3);
+  // 4 servicio incluido
+  d.addPage();bg(LT);head("03  |  SERVICIO INCLUIDO","Acompañamiento técnico durante el contrato","La propuesta contempla los siguientes servicios y suministros, sujetos a las condiciones del contrato.");
+  [["Suministro de tóner","Consumibles para la operación normal del equipo."],["Mantenimiento preventivo","Acciones para conservar el equipo en condiciones operativas."],["Servicio correctivo","Atención de reportes y diagnóstico de fallas."],["Refacciones","Refacciones necesarias para el funcionamiento normal del equipo."]].forEach((s,i)=>{const x=i%2?522:42,y=140+Math.floor(i/2)*125;card(x,y,392,92);
+    d.setFillColor(...BLUE);d.roundedRect(x+16,y+20,40,40,6,6,"F");d.setFont("helvetica","bold");d.setFontSize(10);d.setTextColor(255,255,255);d.text(f2(i+1),x+36,y+44,{align:"center"});d.setFontSize(12);d.setTextColor(...DK);d.text(s[0],x+80,y+34);d.setFont("helvetica","normal");d.setFontSize(8.5);d.setTextColor(...GR);d.text(s[1],x+80,y+60)});
+  d.setFontSize(8.5);d.text("Instalación y configuración inicial: "+(q.instalacion||"por coordinar con el cliente")+".",56,420);foot(4);
+  // 5 condiciones
+  d.addPage();bg(DK);head("04  |  CONDICIONES COMERCIALES","Una propuesta pensada para simplificar su operación","",true);
+  const inc=+q.incBN||+q.incColor;const conds=[`Equipo ${est}, sujeto a disponibilidad y revisión técnica.`,`Plazo de arrendamiento: ${plazo} meses.`,"Facturación mensual.","Renta y clics: precios más IVA.",
+    inc?`Incluye ${fmt(q.incBN)} páginas B/N${color?" y "+fmt(q.incColor)+" a color":""} al mes; el excedente se factura por clic.`:"No hay impresiones incluidas; todo el consumo se factura por clic.","Consumibles, refacciones y servicio conforme al contrato.",
+    ...String(q.notas||"").split("\n").map(x=>x.trim()).filter(Boolean)].slice(0,9);
+  d.setFont("helvetica","normal");d.setFontSize(10);conds.forEach((x,i)=>{const y=135+i*31;d.setFillColor(...TEAL);d.roundedRect(42,y-8,9,9,2,2,"F");d.setTextColor(235,240,246);d.text(x,62,y,{maxWidth:860})});
+  d.setFillColor(...BLUE);d.roundedRect(40,430,880,40,5,5,"F");d.setFont("helvetica","bold");d.setFontSize(10);d.setTextColor(255,255,255);d.text("Gracias por considerar a Office Automation como su aliado en soluciones de impresión.",480,454,{align:"center"});
+  d.setFont("helvetica","normal");d.setFontSize(8.5);d.setTextColor(200,210,222);d.text(`WhatsApp ${E.waTxt}  ·  ${E.correo}  ·  ${E.web}`,480,494,{align:"center"});foot(5,true);
+  savePdf(d,"Propuesta_"+q.folio+".pdf");
+}
+
 /* ===================== eventos ===================== */
-function bindView(v){const m=$("#main");bindCommon(m);
+function bindView(v){const m=$("#main");bindCommon(m);if(v==="prospectos")bindProsp(m);
   m.querySelectorAll("[data-f]").forEach(el=>{const [g,k]=el.dataset.f.split(".");const h=()=>{S.filters[g]={...(S.filters[g]||{}),[k]:el.type==="checkbox"?el.checked:el.value};const pos=el.selectionStart;render();const n=m.querySelector(`[data-f="${el.dataset.f}"]`);if(n&&el.tagName==="INPUT"&&el.type!=="checkbox"){n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}};el.addEventListener(el.tagName==="INPUT"&&el.type!=="checkbox"?"input":"change",h)});
   m.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{S.filters.tonTab=b.dataset.tab;render()});
   // drag & drop
@@ -559,6 +699,7 @@ function bindView(v){const m=$("#main");bindCommon(m);
   if(v==="config"){m.querySelectorAll("[data-urol]").forEach(s=>s.onchange=()=>{const id=s.dataset.urol;setUsuarios({...S.usuarios,[id]:{...S.usuarios[id],rol:s.value}})});
     m.querySelectorAll("[data-ualias]").forEach(s=>s.onchange=()=>{const id=s.dataset.ualias;setUsuarios({...S.usuarios,[id]:{...S.usuarios[id],alias:s.value}})});
     m.querySelectorAll("[data-udel]").forEach(s=>s.onclick=()=>{const u={...S.usuarios};delete u[s.dataset.udel];setUsuarios(u)})}
+  m.querySelectorAll("[data-cotst]").forEach(s=>s.onchange=()=>upd("cotizaciones/"+s.dataset.cotst,{estado:s.value},"Cotización: "+s.value));
   m.querySelectorAll("[data-solst]").forEach(s=>s.onchange=()=>upd("solicitudes/"+s.dataset.solst,{estado:s.value},"Solicitud: "+s.value));
 }
 function stPatch(t,k){const ch={estado:k};const n=ESTADOS.find(x=>x[0]===k)[1];if(k==="en_sitio"&&!t.inicio)ch.inicio=Date.now();if(k==="cerrado"&&!t.fin)ch.fin=Date.now();ch.hist=[...(t.hist||[]),{t:Date.now(),ev:"Estado: "+n,por:S.me?.id||""}];return ch}
@@ -571,6 +712,9 @@ function bindCommon(root){
   root.querySelectorAll("[data-opp]").forEach(x=>x.onclick=()=>oppForm(x.dataset.opp));
   root.querySelectorAll("[data-st]").forEach(x=>x.onclick=()=>{const t=S.tickets.get(x.dataset.st);upd("tickets/"+t._id,stPatch(t,x.dataset.v),x.dataset.v==="en_camino"?"Avisado: vas en camino":"Llegada registrada")});
   root.querySelectorAll("[data-prev]").forEach(x=>x.onclick=()=>{const e=S.equipos.get(x.dataset.prev);nuevoTicket({equipoId:e._id,tipo:"Preventivo",desc:"Mantenimiento preventivo programado ("+e.frec+")."})});
+  root.querySelectorAll("[data-cotpdf]").forEach(x=>x.onclick=()=>{const q=S.cot.get(x.dataset.cotpdf);(q.tipo==="arrendamiento"?pdfArr:pdfCot)(q)});
+  root.querySelectorAll("[data-cotedit]").forEach(x=>x.onclick=()=>cotForm(x.dataset.cotedit));
+  root.querySelectorAll("[data-cotdup]").forEach(x=>x.onclick=()=>{const q={...S.cot.get(x.dataset.cotdup)};delete q._id;delete q.folio;q.estado="borrador";q.fecha=Date.now();cotForm(null,q.tipo,q)});
   root.querySelectorAll("[data-vale]").forEach(x=>x.onclick=()=>pdfVale(S.sol.get(x.dataset.vale)));
   root.querySelectorAll("[data-mov]").forEach(x=>x.onclick=()=>{const i=S.inv.get(x.dataset.mov);upd("inventario/"+i._id,{cant:(+i.cant||0)+(+x.dataset.d)})});
   root.querySelectorAll("[data-editinv]").forEach(x=>x.onclick=()=>invForm(x.dataset.editinv));
@@ -600,6 +744,8 @@ const A={
   ch.hist=[...(ch.hist||t.hist||[]),...ev.map(x=>({t:Date.now(),ev:x,por:S.me?.id||""})),{t:Date.now(),ev:close?"Reporte guardado":"Cambios guardados",por:S.me?.id||""}];
   if(await upd("tickets/"+id,ch,close?"Servicio cerrado":"Guardado")){S.tickets.set(id,{...t,...ch});openTicket(id)}},
  closeTk(id,L){A.saveTk(id,L,true)},
+ async delTk(id){const t=S.tickets.get(id);if(!t||!confirm("¿Eliminar el ticket "+t.folio+"? No se puede deshacer."))return;
+  try{await db.doc("tickets/"+id).del();S.tickets.delete(id);closeDr();toast("Ticket "+t.folio+" eliminado");render()}catch(e){onWriteErr(e)}},
  pdfTk:id=>pdfTicket(S.tickets.get(id)),
  async saveCli(id,L){const ch={};L.querySelectorAll("[data-cf]").forEach(el=>ch[el.dataset.cf]=el.value);if(await upd("clientes/"+id,ch,"Cliente guardado"))setTimeout(()=>openCliente(id,"datos"),300)},
  async addCont(id,L){const k={nombre:val(L,"#kn"),cargo:val(L,"#kc"),tel:val(L,"#kt"),correo:val(L,"#ke")};if(!k.nombre){toast("Escribe el nombre");return}const c=S.clientes.get(id);if(await upd("clientes/"+id,{contactos:[...(c.contactos||[]),k]},"Contacto agregado"))setTimeout(()=>openCliente(id,"contactos"),300)},
@@ -609,12 +755,12 @@ const A={
   if(await save("clientes/"+id,{nombre:n,rfc:val(L,"#nc_r"),municipio:val(L,"#nc_m"),estatus:val(L,"#nc_e"),contactos:[],equiposActivos:0,notas:""},"Cliente creado"))setTimeout(()=>openCliente(id,"datos"),400)},
  nuevaSol(){const cat=S.toner;drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>Nueva solicitud de tóner</h2><div class="panel" style="margin-top:14px"><div class="form">
    <label class="fl full">Cliente<select class="f" id="ns_c"><option value="">Elige un cliente</option>${[...S.clientes.values()].filter(c=>c.estatus==="activo").sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(c=>`<option value="${esc(c._id)}">${esc(c.nombre)}</option>`).join("")}</select></label>
-   <label class="fl">Solicitante<input class="f" id="ns_s"></label><label class="fl">Correo o teléfono<input class="f" id="ns_t"></label>
-   <div class="full" id="ns_p">${[0,1,2].map(i=>`<div class="row" style="margin-bottom:8px"><select class="f" data-pi="${i}" style="flex:2;min-width:180px"><option value="">Impresora / tóner…</option>${cat.map((x,j)=>`<option value="${j}">${esc(x.toner)} — ${esc(x.impresora)}</option>`).join("")}</select><input class="f" data-pq="${i}" type="number" min="1" value="1" style="width:80px"></div>`).join("")}</div></div>
+   <label class="fl">Solicitante<input class="f" id="ns_s"></label><label class="fl">Correo o teléfono<input class="f" id="ns_t"></label><label class="fl full">Domicilio de entrega<input class="f" id="ns_d" placeholder="Si lo dejas vacío se usa la ubicación del cliente"></label>
+   <div class="full" id="ns_p">${[0,1,2].map(i=>`<div class="row" style="margin-bottom:8px"><select class="f" data-pi="${i}" style="flex:2;min-width:180px"><option value="">Impresora / tóner…</option>${cat.map((x,j)=>`<option value="${j}">${esc(x.toner)} — ${esc(x.impresora)}</option>`).join("")}</select><input class="f" data-ps="${i}" placeholder="Serie (o Stock)" style="width:130px"><input class="f" data-pq="${i}" type="number" min="1" value="1" style="width:80px"></div>`).join("")}</div></div>
    <div class="row" style="margin-top:12px"><button class="btn pri" data-a="crearSol">Registrar solicitud</button></div></div>`,L=>bindCommon(L))},
- async crearSol(_,L){const cid=val(L,"#ns_c");if(!cid){toast("Elige el cliente");return}const p=[];L.querySelectorAll("[data-pi]").forEach(s=>{if(s.value!==""){const x=S.toner[+s.value];p.push({toner:x.toner,impresora:x.impresora,cant:+L.querySelector(`[data-pq="${s.dataset.pi}"]`).value||1})}});
+ async crearSol(_,L){const cid=val(L,"#ns_c");if(!cid){toast("Elige el cliente");return}const p=[];L.querySelectorAll("[data-pi]").forEach(s=>{if(s.value!==""){const x=S.toner[+s.value];p.push({toner:x.toner,impresora:x.impresora,serie:L.querySelector(`[data-ps="${s.dataset.pi}"]`).value.trim()||"Stock",cant:+L.querySelector(`[data-pq="${s.dataset.pi}"]`).value||1})}});
   if(!p.length){toast("Agrega al menos un tóner");return}const id=uid();
-  if(await save("solicitudes/"+id,{folio:await folio("SAL"),clienteId:cid,cliente:S.clientes.get(cid).nombre,solicitante:val(L,"#ns_s"),contacto:val(L,"#ns_t"),partidas:p,estado:"pendiente",fecha:Date.now()},"Solicitud registrada"))closeDr()},
+  if(await save("solicitudes/"+id,{folio:await folio("SAL"),clienteId:cid,cliente:S.clientes.get(cid).nombre,solicitante:val(L,"#ns_s"),contacto:val(L,"#ns_t"),domicilio:val(L,"#ns_d"),partidas:p,estado:"pendiente",fecha:Date.now()},"Solicitud registrada"))closeDr()},
  nuevoInv:()=>invForm(),
  async saveInv(id,L){const d={item:val(L,"#iv_i"),tipo:val(L,"#iv_t"),cant:+val(L,"#iv_c")||0,min:+val(L,"#iv_m")||0};if(!d.item){toast("Escribe el artículo");return}if(await save("inventario/"+(id||uid()),d,"Inventario guardado"))closeDr()},
  nuevaOpp:()=>oppForm(),
@@ -632,11 +778,365 @@ function oppForm(id){const o=id?S.opps.get(id):{etapa:"nuevo"};drawer(`<button c
  <label class="fl full">Notas<textarea class="f" id="op_n">${esc(o.notas||"")}</textarea></label></div>
  <div class="row" style="margin-top:12px">${canW()?`<button class="btn pri" data-a="saveOpp" data-id="${esc(id||"")}">Guardar</button>`:""}${o.tel?`<a class="btn wa" target="_blank" rel="noopener" href="${waLink(o.tel,"Hola "+(o.contacto||"")+", le escribe Office Automation.")}">WhatsApp</a>`:""}</div></div>`,L=>bindCommon(L))}
 
+/* ===================== cotizaciones ===================== */
+const COT_EST=["borrador","enviada","aceptada","rechazada"];
+const cotTotal=q=>q.tipo==="arrendamiento"?(+q.renta||0):(q.partidas||[]).reduce((s,p)=>s+(+p.cant||0)*(+p.precio||0),0)*(q.sinIva?1:1.16);
+function vCotiz(){
+  const f=S.filters.cot||{};let Q=[...S.cot.values()].sort((a,b)=>(b.fecha||0)-(a.fecha||0));
+  if(f.q){const v=f.q.toLowerCase();Q=Q.filter(q=>(q.folio+" "+q.empresa+" "+(q.modelo||"")+" "+(q.asunto||"")).toLowerCase().includes(v))}
+  return header("Cotizaciones","Propuestas de arrendamiento y cotizaciones con el formato de Office Automation, listas en PDF.",canW()?`<button class="btn pri" data-a="nuevaArr">+ Propuesta de arrendamiento</button><button class="btn" data-a="nuevaCot">+ Cotización</button>`:"")+
+  `<div class="filters"><input class="f" placeholder="Buscar folio, empresa, modelo…" data-f="cot.q" value="${esc(f.q||"")}" style="flex:1;min-width:200px"></div>
+  <div class="panel wrap"><table class="tbl"><tr><th>Folio</th><th>Tipo</th><th>Empresa</th><th>Fecha</th><th>Importe</th><th>Estado</th><th></th></tr>
+  ${Q.map(q=>`<tr><td class="b" style="white-space:nowrap">${esc(q.folio)}</td><td>${q.tipo==="arrendamiento"?"Arrendamiento":"Cotización"}<div class="muted sm">${esc(q.tipo==="arrendamiento"?q.modelo||"":q.asunto||"")}</div></td><td>${esc(q.empresa)}${q.atencion?`<div class="muted sm">${esc(q.atencion)}</div>`:""}</td><td class="sm">${fd(q.fecha)}</td>
+   <td>${money(cotTotal(q))}${q.tipo==="arrendamiento"?"/mes":""}</td><td><select class="f" data-cotst="${esc(q._id)}" ${canW()?"":"disabled"}>${COT_EST.map(x=>`<option ${q.estado===x?"selected":""}>${x}</option>`).join("")}</select></td>
+   <td class="row"><button class="btn sm" data-cotpdf="${esc(q._id)}">PDF</button>${canW()?`<button class="btn sm" data-cotedit="${esc(q._id)}">Editar</button><button class="btn sm" data-cotdup="${esc(q._id)}">Duplicar</button>`:""}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">Aún no hay cotizaciones.</td></tr>`}</table></div>`;
+}
+function cotForm(id,tipo,base){
+  const q=base||(id?S.cot.get(id):null)||{tipo,fecha:Date.now(),estado:"borrador",plazo:24,estadoEq:"seminuevo",formato:"A3",duplex:true,color:true,ppm:"",marcas:{},partidas:[{cant:1,desc:"",precio:""}]};
+  const arr=(q.tipo||tipo)==="arrendamiento";const P=(q.partidas||[]).length?q.partidas:[{cant:1,desc:"",precio:""}];
+  const dl=`<datalist id="cotcli">${[...S.clientes.values()].map(c=>`<option value="${esc(c.nombre)}">`).join("")}</datalist>`;
+  const comun=`<label class="fl full">Empresa<input class="f" id="q_emp" list="cotcli" value="${esc(q.empresa||"")}"></label>${dl}
+   <label class="fl">Atención a<input class="f" id="q_at" value="${esc(q.atencion||"")}" placeholder="Lic. Nombre Apellido"></label>
+   <label class="fl">Fecha<input class="f" id="q_fe" type="date" value="${new Date((q.fecha||Date.now())+TZ).toISOString().slice(0,10)}"></label>`;
+  const campos=arr?`${comun}
+   <label class="fl">Modelo del equipo<input class="f" id="q_mo" value="${esc(q.modelo||"")}" placeholder="Konica Minolta bizhub C360i"></label>
+   <label class="fl">Estado del equipo<select class="f" id="q_ee">${["seminuevo","nuevo"].map(x=>`<option ${q.estadoEq===x?"selected":""}>${x}</option>`).join("")}</select></label>
+   <label class="fl">Velocidad (ppm)<input class="f" id="q_pp" type="number" value="${esc(q.ppm||"")}"></label>
+   <label class="fl">Formato<select class="f" id="q_fo"><option value="A3" ${q.formato==="A3"?"selected":""}>A3 · doble carta</option><option value="carta" ${q.formato!=="A3"?"selected":""}>Carta / oficio</option></select></label>
+   <label class="fl row" style="flex-direction:row;align-items:center"><input type="checkbox" id="q_du" ${q.duplex!==false?"checked":""}> Dúplex (doble cara)</label>
+   <label class="fl row" style="flex-direction:row;align-items:center"><input type="checkbox" id="q_co" ${q.color?"checked":""}> Equipo a color</label>
+   <label class="fl">Plazo (meses)<input class="f" id="q_pl" type="number" value="${esc(q.plazo||24)}"></label>
+   <label class="fl">Renta mensual (MXN + IVA)<input class="f" id="q_re" type="number" step="0.01" value="${esc(q.renta??"")}"></label>
+   <label class="fl">Clic blanco y negro<input class="f" id="q_cb" type="number" step="0.01" value="${esc(q.clicBN??"")}"></label>
+   <label class="fl">Clic color<input class="f" id="q_cc" type="number" step="0.01" value="${esc(q.clicColor??"")}"></label>
+   <label class="fl">Páginas B/N incluidas al mes<input class="f" id="q_ib" type="number" value="${esc(q.incBN||0)}"></label>
+   <label class="fl">Páginas color incluidas al mes<input class="f" id="q_ic" type="number" value="${esc(q.incColor||0)}"></label>
+   <label class="fl full">Instalación y configuración inicial<input class="f" id="q_in" value="${esc(q.instalacion||"por coordinar con el cliente")}"></label>
+   <label class="fl full">Condiciones adicionales (una por línea)<textarea class="f" id="q_no">${esc(q.notas||"")}</textarea></label>`
+  :`${comun}
+   <label class="fl full">Asunto<input class="f" id="q_as" value="${esc(q.asunto||"")}" placeholder="Cotización de mantenimiento para Kyocera."></label>
+   <div class="full"><div class="muted sm b" style="margin-bottom:6px">Partidas</div><div id="q_pa">${P.map(cotRow).join("")}</div><button class="btn sm" data-a="cotAddRow">+ Agregar partida</button></div>
+   <label class="fl row" style="flex-direction:row;align-items:center"><input type="checkbox" id="q_mk" ${q.marcas?.kyocera?"checked":""}> Logo Kyocera</label>
+   <label class="fl row" style="flex-direction:row;align-items:center"><input type="checkbox" id="q_mm" ${q.marcas?.konica?"checked":""}> Logo Konica Minolta</label>
+   <label class="fl row" style="flex-direction:row;align-items:center"><input type="checkbox" id="q_bc" ${q.banco?"checked":""}> Incluir datos fiscales y bancarios</label>
+   <label class="fl row" style="flex-direction:row;align-items:center"><input type="checkbox" id="q_si" ${q.sinIva?"checked":""}> Sin IVA</label>
+   <label class="fl full">Notas, condiciones y vigencia<textarea class="f" id="q_no" placeholder="Precios en pesos mexicanos. Vigencia de 15 días.">${esc(q.notas||"")}</textarea></label>
+   <label class="fl full">Firma (nombre y cargo, opcional)<input class="f" id="q_fi" value="${esc(q.firma||"")}"></label>`;
+  drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>${id?esc(q.folio):arr?"Nueva propuesta de arrendamiento":"Nueva cotización"}</h2><p class="muted">${arr?"Genera la presentación de 5 láminas: portada, la solución, propuesta económica, servicio incluido y condiciones.":"Precios unitarios sin IVA; el IVA (16%) se calcula solo."}</p>
+   <div class="panel"><div class="form">${campos}</div><div class="row" style="margin-top:14px"><button class="btn pri" data-a="saveCot" data-id="${esc(id||"")}" data-t="${arr?"arrendamiento":"cotizacion"}">Guardar</button><button class="btn" data-a="saveCotPdf" data-id="${esc(id||"")}" data-t="${arr?"arrendamiento":"cotizacion"}">Guardar y descargar PDF</button></div></div>`,L=>{bindCommon(L);bindCotRows(L)});
+}
+function cotRow(p){return `<div class="row" data-qrow style="margin-bottom:8px;align-items:flex-start"><input class="f" data-qc type="number" min="0" step="any" value="${esc(p.cant??1)}" style="width:70px" aria-label="Cantidad"><textarea class="f" data-qd style="flex:1;min-width:200px;min-height:60px" placeholder="Descripción del producto o servicio" aria-label="Descripción">${esc(p.desc||"")}</textarea><input class="f" data-qp type="number" step="0.01" value="${esc(p.precio??"")}" placeholder="Precio unitario" style="width:120px" aria-label="Precio unitario"><button class="btn sm" data-qdel title="Quitar partida">✕</button></div>`}
+function cotData(L,tipo){const num=s=>{const v=val(L,s);return v===""?"":+v};const fe=val(L,"#q_fe");
+  const d={tipo,empresa:val(L,"#q_emp"),atencion:val(L,"#q_at"),fecha:fe?new Date(fe+"T12:00:00-06:00").getTime():Date.now(),notas:val(L,"#q_no")};
+  if(tipo==="arrendamiento")Object.assign(d,{modelo:val(L,"#q_mo"),estadoEq:val(L,"#q_ee"),ppm:val(L,"#q_pp"),formato:val(L,"#q_fo"),duplex:L.querySelector("#q_du").checked,color:L.querySelector("#q_co").checked,plazo:+val(L,"#q_pl")||24,renta:num("#q_re"),clicBN:num("#q_cb"),clicColor:num("#q_cc"),incBN:+val(L,"#q_ib")||0,incColor:+val(L,"#q_ic")||0,instalacion:val(L,"#q_in")});
+  else Object.assign(d,{asunto:val(L,"#q_as"),marcas:{kyocera:L.querySelector("#q_mk").checked,konica:L.querySelector("#q_mm").checked},banco:L.querySelector("#q_bc").checked,sinIva:L.querySelector("#q_si").checked,firma:val(L,"#q_fi"),
+    partidas:[...L.querySelectorAll("[data-qrow]")].map(r=>({cant:+r.querySelector("[data-qc]").value||0,desc:r.querySelector("[data-qd]").value.trim(),precio:+r.querySelector("[data-qp]").value||0})).filter(p=>p.desc||p.precio)});
+  return d}
+async function saveCot(id,L,tipo,pdf){const d=cotData(L,tipo);if(!d.empresa){toast("Escribe la empresa");return}
+  if(tipo==="arrendamiento"&&(!d.modelo||d.renta==="")){toast("Escribe el modelo y la renta mensual");return}
+  if(tipo!=="arrendamiento"&&!d.partidas.length){toast("Agrega al menos una partida");return}
+  const old=id?S.cot.get(id):null;let folioTxt=old?.folio;if(!folioTxt){try{folioTxt=await folio("COT")}catch(e){return}}
+  const q={...(old||{estado:"borrador",creado:Date.now(),por:S.me?.id||""}),...d,folio:folioTxt};delete q._id;const nid=id||uid();
+  if(await save("cotizaciones/"+nid,q,"Cotización "+folioTxt+" guardada")){S.cot.set(nid,{...q,_id:nid});closeDr();if(pdf)(tipo==="arrendamiento"?pdfArr:pdfCot)(q);render()}}
+Object.assign(A,{
+ nuevaArr:()=>cotForm(null,"arrendamiento"),
+ nuevaCot:()=>cotForm(null,"cotizacion"),
+ cotAddRow(_,L){L.querySelector("#q_pa").insertAdjacentHTML("beforeend",cotRow({cant:1}));bindCotRows(L)},
+ saveCot(id,L){saveCot(id,L,L.querySelector("[data-a=saveCot]").dataset.t,false)},
+ saveCotPdf(id,L){saveCot(id,L,L.querySelector("[data-a=saveCot]").dataset.t,true)},
+ async saveEmpresa(_,L){const d={};L.querySelectorAll("[data-emp]").forEach(el=>d[el.dataset.emp]=el.value.trim());if(await save("config/empresa",d,"Datos de la empresa guardados"))S.empresa=d}
+});
+function bindCotRows(L){L.querySelectorAll("[data-qdel]").forEach(b=>b.onclick=()=>{const rows=L.querySelectorAll("[data-qrow]");if(rows.length>1)b.closest("[data-qrow]").remove()})}
+const EMP_CAMPOS=[["nombre","Razón social"],["rfc","RFC"],["dir","Dirección (pie de los PDF)"],["dirFiscal","Dirección fiscal (si es distinta)"],["waTxt","WhatsApp (como se imprime)"],["tel","Teléfono fijo"],["correo","Correo de servicio"],["web","Sitio web"],["facContacto","Contacto de facturación"],["facCorreo","Correo de facturación"],["banco","Banco"],["cuenta","Número de cuenta"],["clabe","CLABE interbancaria"],["sucursal","Sucursal"]];
+function empresaPanel(){const E=EMP();return `<div class="panel" style="margin-top:16px"><h2>Datos de la empresa</h2><p class="muted sm" style="margin-top:0">Salen en los reportes, vales y cotizaciones. Los datos bancarios solo aparecen en las cotizaciones donde marques «Incluir datos fiscales y bancarios».</p>
+  <div class="form">${EMP_CAMPOS.map(([k,n])=>`<label class="fl">${n}<input class="f" data-emp="${k}" value="${esc(E[k]||"")}"></label>`).join("")}</div><div class="row" style="margin-top:12px"><button class="btn pri" data-a="saveEmpresa">Guardar datos de la empresa</button></div></div>`}
+
+/* ===================== prospectos (CRM comercial) ===================== */
+const ETAPAS_P=[["nuevo","Sin contactar"],["contactado","Contactado"],["conversacion","En conversación"],["diagnostico","Diagnóstico / cita"],["propuesta","Propuesta enviada"],["ganado","Cliente ganado"],["perdido","Perdido"],["descartado","Descartado"]];
+const ETP=Object.fromEntries(ETAPAS_P);
+const RANKP={nuevo:0,contactado:1,conversacion:2,diagnostico:3,propuesta:4,ganado:5};
+const PIPEP=["contactado","conversacion","diagnostico","propuesta","ganado"];
+const FUNP={contactado:"Contactadas",conversacion:"Conversaciones",diagnostico:"Diagnósticos",propuesta:"Propuestas",ganado:"Clientes nuevos"};
+const TERMP=new Set(["ganado","perdido","descartado"]);
+const CANALES_P=[["telefono","Teléfono","#eb6834"],["whatsapp","WhatsApp","#1baf7a"],["email","Correo","#2a78d6"],["visita","Visita","#eda100"],["linkedin","LinkedIn","#e87ba4"],["otro","Otro","#4a3aa7"]];
+const CANP=Object.fromEntries(CANALES_P.map(c=>[c[0],c]));
+const RESULT_P=[["enviado","Correo / mensaje enviado","contactado"],["sin_respuesta","No contesta / sin respuesta","contactado"],["hablo","Habló con alguien (seguir)","contactado"],["interesado","Interesado","conversacion"],["cita","Cita / diagnóstico agendado","diagnostico"],["propuesta","Propuesta / cotización enviada","propuesta"],["ganado","Cerró: nuevo cliente","ganado"],["no_interesa","No le interesa","descartado"],["dato_erroneo","Dato erróneo","descartado"],["nota","Solo nota interna",null]];
+const RESP_L=Object.fromEntries(RESULT_P.map(r=>[r[0],r[1]])),RESP_ST=Object.fromEntries(RESULT_P.map(r=>[r[0],r[2]]));
+const LISTAS_P={renta:"Prospecto renta",usados:"Prospecto usados/refacc.",cliente:"Cliente actual",perdido:"Cliente perdido",manual:"Prospecto (manual)"};
+const COLAS=[["tlal1","Tlalnepantla · 1.º AHORA: empresas fuera de la campaña de correo"],["tlalA","Tlalnepantla · 2.º DESDE EL 13-NOV: prioridad A (ya recibieron el correo)"],["postmail","Llamar a quien ya recibió correo y no respondió"],["ole1","Oleada 1 · renta A con correo directo"],["ole2","Oleada 2 · renta A con correo genérico"],["ole3","Oleada 3 · renta A solo teléfono"],["rentaA","Renta prioridad A (todas)"],["rentaB","Renta prioridad B"],["usadosA","Usados/refacciones prioridad A"],["perdido","Clientes perdidos (recuperar)"],["cliente","Clientes actuales (venta cruzada)"]];
+const METAS_DEF={contactado:500,conversacion:40,diagnostico:15,propuesta:10,ganado:3};
+const DIAS_P=[[1,"L"],[2,"M"],[3,"X"],[4,"J"],[5,"V"],[6,"S"],[0,"D"]];
+const PR={tab:"hoy",f:{sort:"score"},page:0,sel:new Set(),cola:null,dashP:"mes",dashW:"",cache:{},busy:{}};
+const hoyP=()=>new Date(Date.now()+TZ).toISOString().slice(0,10);
+const addD=(s,n)=>{const d=new Date(s+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+const sdate=s=>{if(!s)return"";const [y,m,d]=s.slice(0,10).split("-");return +d+" "+MESES[+m-1]};
+const crmCfg=()=>S.crm||{};
+const metasP=()=>({...METAS_DEF,...(crmCfg().metas||{})});
+function personasP(){ // quienes pueden trabajar prospectos
+  const ids=new Set((window.OA_CONFIG.ADMINS||[]).map(x=>x.toLowerCase()));
+  Object.entries(S.usuarios).forEach(([id,u])=>{if(["admin","direccion","comercial","atencion"].includes(u.rol))ids.add(id)});
+  Object.keys(crmCfg().miembros||{}).forEach(id=>ids.add(id));
+  return [...ids].map(id=>({id,nombre:nombreP(id),...((crmCfg().miembros||{})[id]||{})}));
+}
+const miembrosP=()=>personasP().filter(m=>m.activo!==false&&(crmCfg().miembros||{})[m.id]);
+const nombreP=id=>id?(S.usuarios[id]?.alias||(id===S.me?.id?S.me.name:"")||id.split("@")[0].replace(/\./g," ").replace(/\b\w/g,c=>c.toUpperCase())):"";
+const metaDiaP=id=>{const m=(crmCfg().miembros||{})[id];return m&&m.meta!=null&&m.meta!==""?+m.meta||0:(+crmCfg().metaDiaria||25)};
+const frioP=id=>!!(crmCfg().miembros||{})[id]?.frio;
+const telP=l=>l.contacto?.tel||l.tel||"",mailP=l=>l.contacto?.email||l.email||"";
+async function rpc(n,a){const {data,error}=await sb.rpc(n,a);if(error){toast(error.code==="42501"||/acceso/i.test(error.message)?"No tienes acceso a prospectos.":"Error: "+error.message);throw error}return data}
+function pload(key,fn){ // carga asíncrona con caché; vuelve a pintar al terminar
+  if(PR.cache[key]!==undefined||PR.busy[key])return PR.cache[key];PR.busy[key]=true;
+  fn().then(v=>{PR.cache[key]=v}).catch(()=>{PR.cache[key]=null}).finally(()=>{PR.busy[key]=false;if(cur()==="prospectos")render()});return undefined}
+const pflush=(...pre)=>{Object.keys(PR.cache).forEach(k=>{if(!pre.length||pre.some(p=>k.startsWith(p)))delete PR.cache[k]})};
+const chipP=e=>`<span class="chip ${e==="ganado"?"ok":TERMP.has(e)?"bad":["conversacion","diagnostico","propuesta"].includes(e)?"warn":e==="contactado"?"blue":""}">${esc(ETP[e]||e)}</span>`;
+const cdot=c=>`<i class="cdot" style="background:${(CANP[c]||CANP.otro)[2]}"></i>`;
+
+function vProspectos(){
+  const tabs=[["hoy","Hoy"],["empresas","Empresas"],["resultados","Resultados"],["equipo","Equipo y metas"]];
+  const body={hoy:pHoy,empresas:pEmpresas,resultados:pResultados,equipo:pEquipo}[PR.tab]();
+  return header("Prospectos","Las 41,094 empresas del DENUE y el seguimiento comercial del equipo.",`<button class="btn" data-pa="nueva">+ Empresa</button>`)+
+   `<div class="tabs">${tabs.map(([k,n])=>`<button class="${PR.tab===k?"on":""}" data-ptab="${k}">${n}</button>`).join("")}</div>${body}`;
+}
+/* ---------- Hoy ---------- */
+function pHoy(){
+  const me=S.me.id,t=hoyP();const H=pload("hoy:"+me,()=>rpc("prosp_hoy",{p_persona:me}));
+  if(H===undefined)return `<div class="panel empty">Cargando tu día…</div>`;if(!H)return `<div class="panel empty">No se pudo cargar. Recarga la página.</div>`;
+  const frio=frioP(me),meta=metaDiaP(me),n=H.hechos.length,falta=Math.max(0,meta-n);
+  PR.cola=PR.cola||(()=>{try{return localStorage.getItem("oa_cola")}catch(e){return null}})()||"tlal1";
+  const libres=frio&&H.nnuevos<Math.max(falta,1)?pload("cola:"+PR.cola,()=>rpc("prosp_cola",{p_cola:PR.cola,p_tel:true,p_tomar:0})):null;
+  const fila=(l,seg,hecho)=>`<div class="pitem"><div style="min-width:0"><div class="b click" data-pop="${esc(l.id)}">${esc(l.empresa)} ${l.prio?`<span class="prio">${esc(l.prio)} ${l.score||""}</span>`:""}</div>
+    <div class="muted sm">${esc(l.seg||LISTAS_P[l.lista]||"")}${l.mun?" · "+esc(l.mun):""}${l.emp?" · "+esc(l.emp)+" empl.":""}</div>
+    <div class="sm mono">${esc(telP(l))}${telP(l)&&mailP(l)?" · ":""}${esc(mailP(l))}${!telP(l)&&!mailP(l)?`<span class="muted">sin datos de contacto</span>`:""}</div>
+    ${(seg||hecho)&&l.ult?`<div class="muted sm">Último: ${esc((CANP[l.ult.c]||[])[1]||"")} · ${esc(RESP_L[l.ult.r]||"")} · ${sdate(l.ult.d)}${seg&&l.prox?` · <span style="${l.prox<t?"color:var(--bad);font-weight:600":""}">seguimiento ${l.prox<t?"vencido ":""}${sdate(l.prox)}</span>`:""}</div>`:""}</div>
+    <div class="row">${chipP(l.estado)}${hecho?"":`<button class="btn sm pri" data-pop="${esc(l.id)}" data-pfocus="1">Registrar</button>`}</div></div>`;
+  const lista=(arr,vacio,f)=>arr.length?arr.map(l=>f(l)).join(""):`<div class="muted sm" style="padding:10px 2px">${vacio}</div>`;
+  return `<div class="grid g2" style="align-items:start"><div><div class="muted sm">${esc(new Date(Date.now()+TZ).toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long",timeZone:"UTC"}))}</div>
+     <h2 style="font-size:22px;margin:2px 0 4px">Hola, ${esc(nombreP(me))}</h2><div class="muted">${H.nseg?`Tienes <b>${H.nseg}</b> seguimiento${H.nseg>1?"s":""} para hoy`:"Sin seguimientos pendientes"} · ${fmt(H.nnuevos)} empresas asignadas sin contactar</div></div>
+    <div class="panel"><div class="row" style="justify-content:space-between"><span class="muted sm b">${frio?"LLAMADAS EN FRÍO DE HOY":"CONTACTOS DE HOY"}</span><span style="font-size:26px;font-weight:800">${n}${meta?`<span class="muted" style="font-size:15px"> / ${meta}</span>`:""}</span></div>
+     ${meta?`<div class="meter"><i style="width:${Math.min(100,Math.round(100*n/meta))}%"></i></div><div class="muted sm" style="margin-top:6px">${n>=meta?"Meta del día cumplida":"Faltan "+falta+" para la meta"}</div>`:`<div class="muted sm">Sin meta de llamadas en frío: seguimientos y clientes.</div>`}</div></div>
+   ${agendaP(me,H)}
+   <div class="grid g2" style="margin-top:16px;align-items:start">
+    <div class="panel"><h2>1 · Seguimientos de hoy <span class="muted sm">${H.nseg}</span></h2>${lista(H.seg,"Nada vencido. Al registrar un contacto pon la fecha del próximo seguimiento y aparecerá aquí ese día.",l=>fila(l,true))}</div>
+    ${frio?`<div class="panel"><h2>2 · Nuevos por llamar <span class="muted sm">${fmt(H.nnuevos)}</span></h2>
+      ${H.nnuevos<Math.max(falta,1)?`<div class="bulkp"><b>Tomar empresas de</b><select class="f" data-pcola>${COLAS.map(([k,l])=>`<option value="${k}" ${k===PR.cola?"selected":""}>${esc(l)}</option>`).join("")}</select>
+        <button class="btn sm pri" data-pa="tomar" ${libres?"":"disabled"}>Tomar ${Math.min(Math.max(falta-H.nnuevos,1),libres||0)}</button><span class="muted sm">${libres===undefined?"contando…":fmt(libres||0)+" libres con teléfono"}</span></div>`:""}
+      ${lista(H.nuevos.slice(0,Math.max(falta,10)),"No tienes empresas asignadas sin contactar. Toma un bloque de la cola de arriba.",l=>fila(l))}</div>`
+    :`<div class="panel"><h2>2 · Empresas en proceso <span class="muted sm">${H.proceso.length}</span></h2>${lista(H.proceso,"Aquí aparecen las empresas con interés, cita o propuesta que te pasan.",l=>fila(l,true))}</div>`}
+   </div>
+   <div class="panel" style="margin-top:16px"><h2>Hecho hoy <span class="muted sm">${n} empresas</span></h2>${lista(H.hechos,"Aún no registras contactos hoy.",l=>fila(l,false,true))}</div>`;
+}
+function agendaP(me,H){
+  const t=hoyP(),dow=new Date(t+"T12:00:00Z").getUTCDay(),hech=(S.crmHechos||{})[me]||{},items=[];
+  if(frioP(me)){const m=metaDiaP(me);items.push({txt:`Hacer ${m} llamadas en frío`,sub:`${H.hechos.length} de ${m} hechas`,done:H.hechos.length>=m})}
+  if(H.nseg)items.push({txt:`Dar seguimiento a ${H.nseg} empresa${H.nseg>1?"s":""}`,sub:H.seg.some(l=>l.prox<t)?"hay seguimientos vencidos de días anteriores":"programadas para hoy",alert:H.seg.some(l=>l.prox<t)});
+  const cal=(crmCfg().miembros||{})[me]?.calientes??5;const hot=[...H.seg,...H.proceso].filter(l=>["conversacion","diagnostico","propuesta"].includes(l.estado)).sort((a,b)=>RANKP[b.estado]-RANKP[a.estado]).slice(0,cal);
+  if(hot.length)items.push({txt:`Atender ${hot.length} lead${hot.length>1?"s":""} caliente${hot.length>1?"s":""}`,sub:"conversación, cita o propuesta",hot});
+  (crmCfg().rutinas||[]).filter(r=>r.persona===me&&(r.dias||[]).map(Number).includes(dow)).forEach(r=>items.push({txt:r.texto,sub:"Rutina",done:!!hech[r.id],chk:"r:"+r.id}));
+  [...S.tareas.values()].filter(k=>k.persona===me&&!(k.hecha&&k.hechaEl!==t)&&!(!k.hecha&&k.fecha>t)).forEach(k=>items.push({txt:k.texto,sub:!k.hecha&&k.fecha<t?"Pendiente desde el "+sdate(k.fecha):k.por&&k.por!==me?"Asignada por "+nombreP(k.por):"Tarea",done:!!k.hecha,chk:"t:"+k._id,alert:!k.hecha&&k.fecha<t,del:k._id}));
+  const d=items.filter(i=>i.done).length;
+  return `<div class="panel" style="margin-top:16px"><h2>Tu agenda de hoy <span class="muted sm">${items.length?`${d} de ${items.length} hechas`:"nada programado"}</span></h2>
+   ${items.map(i=>`<div class="agi ${i.done?"done":""}">${i.chk?`<input type="checkbox" data-pchk="${esc(i.chk)}" ${i.done?"checked":""} aria-label="Marcar como hecha">`:`<span class="agb">${i.done?"✓":""}</span>`}
+     <div style="flex:1;min-width:0"><div class="b" style="${i.alert&&!i.done?"color:var(--bad)":""}">${esc(i.txt)}</div><div class="muted sm">${esc(i.sub||"")}</div>
+     ${i.hot?`<div class="row" style="margin-top:6px">${i.hot.map(l=>`<button class="chip warn click" data-pop="${esc(l.id)}" data-pfocus="1">${esc(l.empresa)}</button>`).join("")}</div>`:""}</div>
+     ${i.del&&!i.done?`<button class="btn sm" data-pdeltarea="${esc(i.del)}">Borrar</button>`:""}</div>`).join("")}
+   <div class="row" style="margin-top:10px"><input class="f" id="pt_txt" placeholder="Nueva tarea, p. ej. Llamar a Larissa (Cushman)" style="flex:1;min-width:180px"><select class="f" id="pt_who">${(miembrosP().length?miembrosP():personasP()).map(m=>`<option value="${esc(m.id)}" ${m.id===me?"selected":""}>${esc(m.nombre)}</option>`).join("")}</select><input class="f" id="pt_fe" type="date" value="${t}"><button class="btn" data-pa="tarea">Añadir</button></div></div>`;
+}
+/* ---------- Empresas ---------- */
+function pEmpresas(){
+  const f=PR.f,key="list:"+JSON.stringify(f)+":"+PR.page;
+  const R=pload(key,()=>rpc("prosp_buscar",{p:f,p_offset:PR.page*50,p_limit:50}));
+  const muns=pload("muns",()=>rpc("prosp_municipios",{}))||[];
+  const sel=(k,l,opts)=>`<label class="fl">${l}<select class="f" data-pf="${k}">${opts.map(([v,t])=>`<option value="${esc(v)}" ${String(f[k]||"")===v?"selected":""}>${esc(t)}</option>`).join("")}</select></label>`;
+  const ms=personasP();const tot=R?.total||0,pages=Math.max(1,Math.ceil(tot/50));
+  return `<div class="filters"><input class="f" data-pq placeholder="Buscar por nombre, correo, teléfono o colonia" value="${esc(f.q||"")}" style="flex:1;min-width:240px"></div>
+  <div class="panel pfil">${sel("lista","Lista",[["","Todas"],...Object.entries(LISTAS_P)])}${sel("prio","Prioridad",[["","Todas"],["A","A"],["B","B"],["C","C"]])}${sel("ole","Oleada",[["","Todas"],["1","Oleada 1"],["2","Oleada 2"],["3","Oleada 3"]])}
+   ${sel("estado","Estado",[["","Todos"],...ETAPAS_P,["vencido","Seguimiento vencido"]])}${sel("resp","Responsable",[["","Todos"],["_none","Sin asignar"],...ms.map(m=>[m.id,m.nombre])])}
+   ${sel("mun","Alcaldía / municipio",[["","Todos"],...muns.map(m=>[m,m])])}${sel("dato","Datos de contacto",[["","Cualquiera"],["email","Con correo"],["tel","Con teléfono"],["ambos","Con correo y teléfono"]])}
+   ${sel("sort","Ordenar por",[["score","Puntuación"],["nombre","Nombre"],["ultimo","Último contacto"],["proximo","Próximo seguimiento"]])}</div>
+  <div class="bulkp"><b>${R?fmt(tot):"…"}</b> empresas${PR.sel.size?` · <b>${PR.sel.size}</b> seleccionadas`:""}<span style="flex:1"></span>
+   <select class="f" id="pb_who"><option value="">Asignar a…</option>${ms.map(m=>`<option value="${esc(m.id)}">${esc(m.nombre)}</option>`).join("")}<option value="_none">Quitar responsable</option></select>
+   <button class="btn sm" data-pa="asignar">${PR.sel.size?"Asignar seleccionadas":"Asignar las "+fmt(Math.min(tot,5000))}</button><button class="btn sm" data-pa="campana">Registrar campaña de correo</button></div>
+  ${R===undefined?`<div class="panel empty">Buscando…</div>`:!R?`<div class="panel empty">No se pudo cargar.</div>`:`<div class="panel wrap"><table class="tbl"><tr><th><input type="checkbox" data-pselall aria-label="Seleccionar página"></th><th>Empresa</th><th>Segmento</th><th>Municipio</th><th>Empl.</th><th>Prior.</th><th>Estado</th><th>Responsable</th><th>Último</th><th>Próximo</th></tr>
+   ${R.rows.map(l=>`<tr><td><input type="checkbox" data-psel="${esc(l.id)}" ${PR.sel.has(l.id)?"checked":""} aria-label="Seleccionar"></td><td class="b click" data-pop="${esc(l.id)}">${esc(l.empresa)}<div class="muted sm" style="font-weight:400">${esc(mailP(l)||telP(l)||"sin datos de contacto")}</div></td>
+    <td class="sm">${esc(l.seg||LISTAS_P[l.lista]||"")}</td><td class="sm">${esc(l.mun)}</td><td class="sm" style="white-space:nowrap">${esc(l.emp)}</td><td>${l.prio?`<span class="prio">${esc(l.prio)} ${l.score}</span>`:""}${l.ole?` <span class="muted sm">O${l.ole}</span>`:""}</td>
+    <td>${chipP(l.estado)}</td><td class="sm">${esc(nombreP(l.resp))}</td><td class="sm" style="white-space:nowrap">${l.ult?cdot(l.ult.c)+" "+sdate(l.ult.d):""}</td><td class="sm" style="white-space:nowrap;${l.prox&&l.prox<hoyP()&&!TERMP.has(l.estado)?"color:var(--bad);font-weight:600":""}">${sdate(l.prox)}</td></tr>`).join("")||`<tr><td colspan="10" class="empty">Ninguna empresa coincide con estos filtros.</td></tr>`}</table>
+   <div class="row" style="justify-content:flex-end;margin-top:10px"><span class="muted sm">Página ${PR.page+1} de ${fmt(pages)}</span><button class="btn sm" data-ppg="-1" ${PR.page?"":"disabled"}>Anterior</button><button class="btn sm" data-ppg="1" ${PR.page<pages-1?"":"disabled"}>Siguiente</button></div></div>`}`;
+}
+/* ---------- Resultados ---------- */
+function rangoP(k){const t=hoyP(),d=new Date(t+"T12:00:00Z"),wd=(d.getUTCDay()+6)%7;
+  return {hoy:[t,t],semana:[addD(t,-wd),t],semana_ant:[addD(t,-wd-7),addD(t,-wd-1)],mes:[t.slice(0,8)+"01",t],"30":[addD(t,-29),t],todo:["2000-01-01",t]}[k]}
+function pResultados(){
+  const [a,b]=rangoP(PR.dashP),who=PR.dashW;const R=pload(`res:${a}:${b}:${who}`,()=>rpc("prosp_resumen",{p_desde:a,p_hasta:b,p_persona:who}));
+  const M=metasP(),mes=PR.dashP==="mes";
+  const head=`<div class="row" style="justify-content:space-between;margin-bottom:12px"><div class="row">${[["hoy","Hoy"],["semana","Esta semana"],["semana_ant","Semana pasada"],["mes","Este mes"],["30","Últimos 30 días"],["todo","Todo"]].map(([k,l])=>`<button class="btn sm ${PR.dashP===k?"pri":""}" data-pdp="${k}">${l}</button>`).join("")}</div>
+   <div class="row"><select class="f" data-pdw><option value="">Todo el equipo</option>${personasP().map(m=>`<option value="${esc(m.id)}" ${m.id===who?"selected":""}>${esc(m.nombre)}</option>`).join("")}</select><button class="btn sm" data-pa="informe" ${R?"":"disabled"}>Informe PDF</button></div></div>`;
+  if(R===undefined)return head+`<div class="panel empty">Calculando…</div>`;if(!R)return head+`<div class="panel empty">No se pudo cargar.</div>`;
+  const E=R.embudo||{},pos=E.conversacion||0;const mx=Math.max(1,...PIPEP.map(s=>Math.max(E[s]||0,mes?M[s]:0)));
+  const dias=(()=>{const by={};(R.dias||[]).forEach(x=>{(by[x.d]=by[x.d]||{})[x.c]=x.n});const ks=[];let d=b>addD(a,40)?a:a;const start=PR.dashP==="todo"?addD(b,-59):PR.dashP==="hoy"||PR.dashP.startsWith("semana")?addD(b,-13):a;for(let x=start;x<=b&&ks.length<62;x=addD(x,1))ks.push(x);
+    const tot=ks.map(k=>Object.values(by[k]||{}).reduce((s,v)=>s+v,0));const m=Math.max(4,...tot);
+    return `<div class="pbars">${ks.map((k,i)=>`<div class="pbw" title="${sdate(k)}: ${tot[i]} contactos"><div class="pst" style="height:${Math.round(100*tot[i]/m)}%">${CANALES_P.map(([c,,col])=>(by[k]||{})[c]?`<i style="flex:${by[k][c]};background:${col}"></i>`:"").join("")}</div><small>${i%Math.ceil(ks.length/10)===0?sdate(k):""}</small></div>`).join("")}</div>
+     <div class="row sm muted" style="margin-top:6px">${CANALES_P.map(([c,l,col])=>`<span><i class="cdot" style="background:${col}"></i> ${l}</span>`).join("")}</div>`})();
+  return head+`<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+   <div class="kpi"><i class="ink" style="background:var(--c)"></i><div class="v">${fmt(R.contactadas)}</div><div class="l">empresas contactadas${mes?` · meta ${fmt(M.contactado)}`:""}</div></div>
+   <div class="kpi"><i class="ink" style="background:var(--m)"></i><div class="v">${fmt(R.uno_a_uno)}</div><div class="l">contactos uno a uno</div></div>
+   <div class="kpi"><i class="ink" style="background:var(--y)"></i><div class="v">${fmt(R.masivos)}</div><div class="l">envíos de campaña</div></div>
+   <div class="kpi"><i class="ink" style="background:var(--k)"></i><div class="v">${fmt(pos)}</div><div class="l">respuestas positivas · ${R.contactadas?Math.round(100*pos/R.contactadas):0}%</div></div>
+   <div class="kpi"><i class="ink" style="background:var(--ok)"></i><div class="v">${fmt(E.ganado||0)}</div><div class="l">clientes nuevos${mes?` · meta ${M.ganado}`:""}</div></div>
+   <div class="kpi"><i class="ink" style="background:var(--bad)"></i><div class="v" style="${R.vencidos?"color:var(--bad)":""}">${fmt(R.vencidos)}</div><div class="l">seguimientos vencidos</div></div></div>
+  <div class="grid g2" style="margin-top:16px;align-items:start">
+   <div class="panel"><h2>Embudo del periodo</h2>${PIPEP.map((s,i)=>`<div class="frow"><span class="sm b">${FUNP[s]}</span><div class="ftr"><div style="width:${100*(E[s]||0)/mx}%;background:var(--blue);opacity:${.45+i*.13}"></div>${mes?`<b style="left:calc(${100*M[s]/mx}% - 1px)"></b>`:""}</div><span class="sm" style="text-align:right">${fmt(E[s]||0)}${mes?`<span class="muted"> / ${fmt(M[s])}</span>`:i?`<span class="muted"> · ${E[PIPEP[i-1]]?Math.round(100*(E[s]||0)/E[PIPEP[i-1]]):0}%</span>`:""}</span></div>`).join("")}</div>
+   <div class="panel"><h2>Contactos por día</h2>${dias}</div></div>
+  <div class="grid g2" style="margin-top:16px;align-items:start">
+   <div class="panel"><h2>Canales</h2><table class="tbl"><tr><th>Canal</th><th>Contactos</th><th>Positivas</th><th>Tasa</th></tr>${Object.entries(R.canales||{}).sort((x,y)=>y[1].n-x[1].n).map(([c,v])=>`<tr><td>${cdot(c)} ${esc((CANP[c]||[,c])[1])}</td><td>${fmt(v.n)}</td><td>${fmt(v.pos)}</td><td>${v.n?Math.round(100*v.pos/v.n):0}%</td></tr>`).join("")||`<tr><td colspan="4" class="empty">Sin contactos en el periodo.</td></tr>`}</table></div>
+   <div class="panel"><h2>Equipo</h2><table class="tbl"><tr><th>Persona</th><th>Contactos</th><th>Empresas</th><th>Positivas</th></tr>${Object.entries(R.equipo||{}).sort((x,y)=>y[1].n-x[1].n).map(([p,v])=>`<tr><td>${esc(nombreP(p))}</td><td>${fmt(v.n)}</td><td>${fmt(v.emp)}</td><td>${fmt(v.pos)}</td></tr>`).join("")||`<tr><td colspan="4" class="empty">Sin actividad.</td></tr>`}</table></div></div>
+  <div class="grid g2" style="margin-top:16px;align-items:start">
+   <div class="panel"><h2>Estado de la base <span class="muted sm">${fmt(R.total)} empresas</span></h2><table class="tbl">${ETAPAS_P.map(([k,l])=>`<tr><td>${chipP(k)}</td><td style="text-align:right">${fmt((R.estados||{})[k]||0)}</td></tr>`).join("")}</table></div>
+   <div class="panel"><h2>Avance por oleada y lista <span class="muted sm">contactadas / total</span></h2><table class="tbl">${(R.oleadas||[]).map(o=>`<tr><td>${esc(o.k.startsWith("ole")?"Oleada "+o.k.slice(3):LISTAS_P[o.k]||o.k)}</td><td style="width:45%"><div class="meter" style="margin:0"><i style="width:${o.n?Math.round(100*o.c/o.n):0}%"></i></div></td><td style="text-align:right;white-space:nowrap">${fmt(o.c)} / ${fmt(o.n)}</td></tr>`).join("")}</table></div></div>`;
+}
+/* ---------- Equipo y metas ---------- */
+function pEquipo(){
+  const adm=S.rol==="admin",C=crmCfg(),M=metasP(),dis=adm?"":"disabled";
+  return `<div class="grid g2" style="align-items:start"><div class="panel"><h2>Personas que contactan</h2><p class="muted sm" style="margin-top:0">Aparecen quienes tienen rol de administración, dirección, comercial o atención en «Equipo y accesos».</p>
+    <table class="tbl"><tr><th>Persona</th><th>Llamadas/día</th><th>Leads calientes/día</th><th>En frío</th><th>En el CRM</th></tr>${personasP().map(m=>{const c=(C.miembros||{})[m.id]||{};return `<tr><td>${esc(m.nombre)}<div class="muted sm">${esc(m.id)}</div></td>
+     <td><input class="f" type="number" min="0" data-pm="${esc(m.id)}" data-k="meta" value="${esc(c.meta??0)}" style="width:80px" ${dis}></td><td><input class="f" type="number" min="0" data-pm="${esc(m.id)}" data-k="calientes" value="${esc(c.calientes??5)}" style="width:80px" ${dis}></td>
+     <td><input type="checkbox" data-pm="${esc(m.id)}" data-k="frio" ${c.frio?"checked":""} ${dis}></td><td><input type="checkbox" data-pm="${esc(m.id)}" data-k="activo" ${(C.miembros||{})[m.id]&&c.activo!==false?"checked":""} ${dis}></td></tr>`}).join("")}</table>
+    ${adm?`<div class="row" style="margin-top:10px"><button class="btn pri" data-pa="guardarEquipo">Guardar equipo</button></div>`:""}</div>
+   <div class="panel"><h2>Metas mensuales del embudo</h2><div class="form">${PIPEP.map(s=>`<label class="fl">${FUNP[s]}<input class="f" type="number" min="0" data-pmeta="${s}" value="${M[s]}" ${dis}></label>`).join("")}</div>
+    <p class="muted sm">Embudo de la estrategia: 500 contactadas → 40 conversaciones → 15 diagnósticos → 10 propuestas → 3 clientes nuevos al mes.</p>${adm?`<button class="btn pri" data-pa="guardarMetas">Guardar metas</button>`:""}</div></div>
+  <div class="panel" style="margin-top:16px"><h2>Rutinas del equipo <span class="muted sm">tareas que se repiten en la agenda de cada día</span></h2><div class="wrap"><table class="tbl"><tr><th>Persona</th><th>Tarea</th><th>Días</th><th></th></tr>
+   ${(C.rutinas||[]).map((r,i)=>`<tr><td><select class="f" data-prp="${i}" ${dis}>${personasP().map(m=>`<option value="${esc(m.id)}" ${m.id===r.persona?"selected":""}>${esc(m.nombre)}</option>`).join("")}</select></td><td><input class="f" data-prt="${i}" value="${esc(r.texto)}" style="width:100%;min-width:220px" ${dis}></td>
+    <td style="white-space:nowrap">${DIAS_P.map(([v,l])=>`<label class="sm" style="margin-right:5px"><input type="checkbox" data-prd="${i}" value="${v}" ${(r.dias||[]).map(Number).includes(v)?"checked":""} ${dis}>${l}</label>`).join("")}</td><td>${adm?`<button class="btn sm" data-prx="${i}">Quitar</button>`:""}</td></tr>`).join("")||`<tr><td colspan="4" class="empty">Sin rutinas.</td></tr>`}</table></div>
+   ${adm?`<div class="row" style="margin-top:10px"><button class="btn" data-pa="addRutina">Añadir rutina</button><button class="btn pri" data-pa="guardarRutinas">Guardar rutinas</button></div>`:""}</div>
+  ${adm?`<div class="panel" style="margin-top:16px"><h2>Importar base de prospectos</h2><p class="muted sm" style="margin-top:0">Elige el archivo <b>OA360_prospectos_PRIVADO.json</b>. Solo agrega empresas nuevas: nunca borra ni pisa el seguimiento que ya exista. También carga el equipo, las metas y las rutinas del CRM anterior si aquí aún no hay.</p>
+   <div class="row"><input type="file" id="pimp" accept=".json,application/json"><button class="btn pri" data-pa="importar">Importar</button></div><div class="muted sm" id="pimp_m" style="margin-top:8px"></div></div>`:""}
+  <div class="panel" style="margin-top:16px"><h2>Cómo trabajar los prospectos</h2><ol class="sm" style="margin:0;padding-left:18px;line-height:1.7">
+   <li>Llamadas en frío (Madelein): en <b>Hoy</b> toma un bloque de empresas con teléfono de la cola y trabaja primero los seguimientos vencidos. Cuando una empresa muestra interés o agenda cita, cambia el responsable en su ficha para pasarla a quien la cierra.</li>
+   <li>El resto del equipo ve en <b>Hoy</b> sus seguimientos y sus empresas en conversación, cita o propuesta.</li>
+   <li>Después de cada llamada, WhatsApp o correo pulsa <b>Registrar</b>: canal, resultado, nota y fecha del próximo seguimiento.</li>
+   <li>Cuando una empresa llega a <b>diagnóstico o propuesta</b>, pasa sola al embudo de <b>Comercial</b>. Desde su ficha puedes crear la <b>cotización</b> y, al ganarla, <b>convertirla en cliente</b>.</li>
+   <li>Cuando salga una campaña de mailing, en <b>Empresas</b> filtra la oleada y usa <b>Registrar campaña de correo</b>.</li></ol></div>`;
+}
+/* ---------- Ficha ---------- */
+let PD={c:"telefono",r:"",n:"",prox:"",est:""};
+async function openProsp(id,focus){let l;try{l=await rpc("prosp_ficha",{p_id:id})}catch(e){return}if(!l){toast("No existe la empresa");return}
+  if(!PR.fichaId||PR.fichaId!==id)PD={c:telP(l)?"telefono":"email",r:"",n:"",prox:"",est:""};PR.fichaId=id;PR.ficha=l;fichaP(focus)}
+function sugEst(cur,res){const st=RESP_ST[res];if(!st)return cur;if(TERMP.has(st))return st;if(TERMP.has(cur))return RANKP[st]>=2?st:cur;return RANKP[st]>RANKP[cur]?st:cur}
+function fichaP(focus){
+  const l=PR.ficha,es=l.estado,x=l.contacto||{},tel=telP(l),mail=mailP(l),est=PD.est||(PD.r?sugEst(es,PD.r):es);
+  const dir=[l.calle,l.colonia,l.cp&&("CP "+l.cp),l.mun,l.ent].filter(Boolean).join(", ");
+  drawer(`<button class="btn sm x" data-close>Cerrar</button><div class="muted sm">${esc(LISTAS_P[l.lista]||"")}${l.ole?" · Oleada "+l.ole:""}</div><h2>${esc(l.empresa)}</h2>${l.razon?`<div class="muted">${esc(l.razon)}</div>`:""}
+   <div class="row" style="margin:6px 0 12px">${chipP(es)}${l.prio?`<span class="prio">Prioridad ${esc(l.prio)} · ${l.score}</span>`:""}</div>
+   <div class="panel"><div class="form" style="grid-template-columns:repeat(3,1fr)"><label class="fl">Estado<select class="f" data-pfx="estado">${ETAPAS_P.map(([k,n])=>`<option value="${k}" ${k===es?"selected":""}>${n}</option>`).join("")}</select></label>
+    <label class="fl">Responsable<select class="f" data-pfx="resp"><option value="">Sin asignar</option>${personasP().map(m=>`<option value="${esc(m.id)}" ${m.id===l.resp?"selected":""}>${esc(m.nombre)}</option>`).join("")}</select></label>
+    <label class="fl">Próximo seguimiento<input class="f" type="date" data-pfx="prox" value="${esc(l.prox||"")}"></label></div>
+    <div class="row" style="margin-top:10px"><button class="btn sm" data-a="cotizar" data-id="cotizacion">+ Cotización</button><button class="btn sm" data-a="cotizar" data-id="arrendamiento">+ Propuesta de arrendamiento</button>${["propuesta","ganado"].includes(es)||RANKP[es]>=3?`<button class="btn sm" data-a="aCliente">Convertir en cliente</button>`:""}</div></div>
+   <div class="panel" id="pact" style="margin-top:14px"><h2>Registrar contacto</h2><div class="row">${CANALES_P.map(([k,n,c])=>`<button class="btn sm ${PD.c===k?"pri":""}" data-pcan="${k}"><i class="cdot" style="background:${c}"></i>${n}</button>`).join("")}</div>
+    <div class="form" style="margin-top:10px"><label class="fl">Resultado<select class="f" id="pd_res"><option value="">— elegir —</option>${RESULT_P.map(([k,n])=>`<option value="${k}" ${PD.r===k?"selected":""}>${n}</option>`).join("")}</select></label>
+     <label class="fl">Estado tras el contacto<select class="f" id="pd_est">${ETAPAS_P.map(([k,n])=>`<option value="${k}" ${k===est?"selected":""}>${n}</option>`).join("")}</select></label>
+     <label class="fl full">Nota (qué se habló, con quién, qué sigue)<textarea class="f" id="pd_nota" placeholder="Ej. Habló con la administradora, tienen 4 equipos HP propios, renovación en enero.">${esc(PD.n)}</textarea></label>
+     <div class="fl full">Próximo seguimiento<div class="row"><input class="f" type="date" id="pd_prox" value="${esc(PD.prox)}">${[["Mañana",1],["+3 días",3],["+1 semana",7],["+2 semanas",14],["+1 mes",30]].map(([t,n])=>`<button class="btn sm" data-pplus="${n}">${t}</button>`).join("")}</div></div></div>
+    <div class="row" style="margin-top:10px"><button class="btn pri" data-a="registrar">Guardar contacto</button><span class="muted sm">Se registra a nombre de ${esc(nombreP(S.me.id))}</span></div></div>
+   <div class="panel" style="margin-top:14px"><h2>Datos de la empresa</h2><table class="tbl sm">
+    <tr><td class="muted" style="width:120px">Teléfono</td><td>${tel?`<span class="mono">${esc(tel)}</span> <a class="btn sm" href="tel:${esc(tel.replace(/[^\d+]/g,""))}">Llamar</a> <a class="btn sm wa" target="_blank" rel="noopener" href="${waLink(tel,"Hola, le escribe Office Automation.")}">WhatsApp</a>`:"—"}</td></tr>
+    <tr><td class="muted">Correo</td><td>${mail?`<a href="mailto:${esc(mail)}">${esc(mail)}</a>${l.email_gen&&!x.email?` <span class="muted">(genérico)</span>`:""}`:"—"}</td></tr>
+    ${l.web?`<tr><td class="muted">Web</td><td><a href="${esc(/^https?:/.test(l.web)?l.web:"https://"+l.web)}" target="_blank" rel="noopener">${esc(l.web.replace(/^https?:\/\//,""))}</a></td></tr>`:""}
+    <tr><td class="muted">Dirección</td><td>${esc(dir||"—")}${l.calle?` · <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/${encodeURIComponent([l.empresa,l.calle,l.colonia,l.mun].join(" "))}">Mapa</a>`:""}</td></tr>
+    ${l.giro?`<tr><td class="muted">Giro</td><td>${esc(l.giro)}</td></tr>`:""}${l.seg?`<tr><td class="muted">Segmento</td><td>${esc(l.seg)}</td></tr>`:""}${l.emp?`<tr><td class="muted">Empleados</td><td>${esc(l.emp)}</td></tr>`:""}
+    ${l.id.startsWith("D")?`<tr><td class="muted">ID DENUE</td><td class="mono">${esc(l.id.slice(1))}</td></tr>`:""}</table></div>
+   <div class="panel" style="margin-top:14px"><h2>Persona de contacto</h2><div class="form"><label class="fl">Nombre<input class="f" id="px_n" value="${esc(x.contacto||"")}"></label><label class="fl">Cargo<input class="f" id="px_c" value="${esc(x.cargo||"")}"></label>
+    <label class="fl">Teléfono directo<input class="f" id="px_t" value="${esc(x.tel||"")}"></label><label class="fl">Correo directo<input class="f" id="px_e" type="email" value="${esc(x.email||"")}"></label>
+    <label class="fl full">Notas generales<textarea class="f" id="px_notas">${esc(l.notas||"")}</textarea></label></div><div class="row" style="margin-top:10px"><button class="btn sm" data-a="guardarDatos">Guardar datos</button></div></div>
+   <div class="panel" style="margin-top:14px"><h2>Historial <span class="muted sm">${(l.acts||[]).length} registros</span></h2>${(l.acts||[]).map(a=>`<div class="pev">${cdot(a.canal)}<div><div class="sm b">${esc((CANP[a.canal]||[,a.canal])[1])} · ${esc(RESP_L[a.resultado]||a.resultado)} <span class="muted" style="font-weight:400">· ${fdt(new Date(a.fecha).getTime())} · ${esc(nombreP(a.persona))}</span></div>${a.campana?`<div class="muted sm">Campaña: ${esc(a.campana)}</div>`:""}${a.nota?`<div class="sm" style="white-space:pre-wrap">${esc(a.nota)}</div>`:""}</div></div>`).join("")||`<div class="muted sm">Sin contactos registrados todavía.</div>`}</div>`,L=>{bindCommon(L);bindFicha(L)});
+  if(focus){const p=$("#pact");p&&p.scrollIntoView({block:"start"});$("#pd_res")?.focus()}
+}
+function syncPD(L){PD.n=L.querySelector("#pd_nota")?.value||"";PD.prox=L.querySelector("#pd_prox")?.value||"";PD.est=L.querySelector("#pd_est")?.value||PD.est}
+function bindFicha(L){const l=PR.ficha;
+  L.querySelectorAll("[data-pfx]").forEach(el=>el.onchange=async()=>{const k=el.dataset.pfx;try{PR.ficha={...PR.ficha,...await rpc("prosp_actualizar",{p_id:l.id,p:{[k]:el.value}})};toast("Guardado");pflush("hoy","list","res");render();if(k==="estado")syncOpp(PR.ficha);fichaP()}catch(e){}});
+  L.querySelectorAll("[data-pcan]").forEach(b=>b.onclick=()=>{syncPD(L);PD.c=b.dataset.pcan;fichaP()});
+  const rs=L.querySelector("#pd_res");if(rs)rs.onchange=()=>{syncPD(L);PD.r=rs.value;PD.est="";if(!PD.prox){const p={enviado:4,sin_respuesta:2,hablo:3,interesado:2,cita:1,propuesta:3}[PD.r];if(p)PD.prox=addD(hoyP(),p)}fichaP()};
+  L.querySelectorAll("[data-pplus]").forEach(b=>b.onclick=()=>{syncPD(L);PD.prox=addD(hoyP(),+b.dataset.pplus);fichaP()});
+}
+async function syncOpp(l){ // integra con el embudo de Comercial cuando la empresa llega a diagnóstico o más
+  if(RANKP[l.estado]<3&&!["perdido"].includes(l.estado))return;const id="p-"+l.id,o=S.opps.get(id);if(!o&&l.estado==="perdido")return;
+  const etapa={diagnostico:"diagnostico",propuesta:"propuesta",ganado:"ganado",perdido:"perdido"}[l.estado];
+  const d={...(o||{creado:Date.now(),tipo:"Renta de impresión",valor:0,equipos:0,notas:"Desde Prospectos"}),empresa:l.empresa,contacto:l.contacto?.contacto||o?.contacto||"",tel:telP(l),etapa,resp:l.resp||S.me.id,prospectoId:l.id,prox:l.prox?new Date(l.prox+"T12:00:00").getTime():o?.prox||null};delete d._id;
+  await save("oportunidades/"+id,d,o?null:"Pasó al embudo de Comercial")}
+Object.assign(A,{
+ async registrar(_,L){syncPD(L);const l=PR.ficha;if(!PD.r){toast("Elige el resultado del contacto");return}
+  try{const nl=await rpc("prosp_registrar",{p_id:l.id,p_canal:PD.c,p_resultado:PD.r,p_nota:PD.n.trim(),p_estado:L.querySelector("#pd_est").value,p_prox:PD.prox||null});
+   toast("Contacto guardado");PD={c:PD.c,r:"",n:"",prox:"",est:""};pflush("hoy","list","res","cola");render();if(nl.estado!==l.estado)syncOpp(nl);openProsp(l.id)}catch(e){}},
+ async guardarDatos(_,L){const l=PR.ficha;const c={contacto:val(L,"#px_n"),cargo:val(L,"#px_c"),tel:val(L,"#px_t"),email:val(L,"#px_e")};
+  try{PR.ficha={...PR.ficha,...await rpc("prosp_actualizar",{p_id:l.id,p:{contacto:c,notas:L.querySelector("#px_notas").value}})};toast("Datos guardados");pflush("list","hoy");render()}catch(e){}},
+ cotizar(t){const l=PR.ficha;t=t||"cotizacion";
+  cotForm(null,t,{tipo:t,fecha:Date.now(),estado:"borrador",plazo:24,estadoEq:"seminuevo",formato:"A3",duplex:true,color:true,marcas:{},partidas:[{cant:1,desc:"",precio:""}],empresa:l.razon||l.empresa,atencion:l.contacto?.contacto||""})},
+ async aCliente(){const l=PR.ficha;const ex=[...S.clientes.values()].find(c=>c.nombre.toLowerCase()===(l.razon||l.empresa).toLowerCase());if(ex){openCliente(ex._id,"datos");return}
+  if(!confirm("¿Dar de alta a "+l.empresa+" como cliente?"))return;const n=l.razon||l.empresa;const id=n.normalize("NFKD").replace(/[^\w]+/g,"-").toLowerCase().replace(/^-|-$/g,"").slice(0,50)+"-"+uid().slice(-4);const x=l.contacto||{};
+  if(await save("clientes/"+id,{nombre:n,rfc:"",municipio:l.mun||"",telefono:telP(l),correo:mailP(l),estatus:"activo",equiposActivos:0,responsable:l.resp||"",notas:"Desde Prospectos ("+l.id+")",contactos:x.contacto?[{nombre:x.contacto,cargo:x.cargo||"",tel:x.tel||telP(l),correo:x.email||mailP(l)}]:[]},"Cliente creado")){
+   if(l.estado!=="ganado"){try{await rpc("prosp_actualizar",{p_id:l.id,p:{estado:"ganado"}});syncOpp({...l,estado:"ganado"})}catch(e){}}pflush();setTimeout(()=>openCliente(id,"datos"),400)}},
+ async tomar(){const me=S.me.id,H=PR.cache["hoy:"+me];const n=Math.min(Math.max(metaDiaP(me)-(H?.hechos.length||0)-(H?.nnuevos||0),1),PR.cache["cola:"+PR.cola]||0);
+  try{const k=await rpc("prosp_cola",{p_cola:PR.cola,p_tel:true,p_tomar:n});toast(k+" empresas asignadas a ti");pflush("hoy","cola","list")}catch(e){}render()},
+ async asignar(){const who=$("#pb_who").value;if(!who){toast("Elige a quién asignar");return}const p=PR.sel.size?{ids:[...PR.sel]}:PR.f;
+  try{const n=await rpc("prosp_asignar",{p,p_resp:who==="_none"?"":who,p_max:5000});toast(fmt(n)+(who==="_none"?" empresas sin responsable":" empresas asignadas a "+nombreP(who)));PR.sel.clear();pflush("list","hoy","cola")}catch(e){}render()},
+ campana(){const p=PR.sel.size?{ids:[...PR.sel]}:PR.f;drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>Registrar campaña de correo</h2><p class="muted">Marca como <b>contactadas por correo</b> las empresas ${PR.sel.size?"seleccionadas":"filtradas"} que tienen correo. Úsalo el día que salga una campaña de mailing (por ejemplo desde Instantly). No cuenta para la meta diaria uno a uno.</p>
+  <div class="panel"><div class="form"><label class="fl full">Nombre de la campaña<input class="f" id="pc_n" value="Oleada 1 · Diagnóstico gratuito"></label><label class="fl">Plantilla / correo<input class="f" id="pc_t" placeholder="Ej. E-A1"></label><label class="fl">Próximo seguimiento (opcional)<input class="f" type="date" id="pc_p" value="${addD(hoyP(),4)}"></label>
+  <label class="fl full row" style="flex-direction:row;align-items:center"><input type="checkbox" id="pc_s" checked> Saltar las que ya se contactaron antes</label></div><div class="row" style="margin-top:12px"><button class="btn pri" data-a="campanaGo">Registrar envío</button></div></div>`,L=>{bindCommon(L);PR.campP=p})},
+ async campanaGo(_,L){try{const n=await rpc("prosp_campana",{p:PR.campP,p_nombre:val(L,"#pc_n")||"Campaña de correo",p_plantilla:val(L,"#pc_t"),p_prox:val(L,"#pc_p")||null,p_saltar:L.querySelector("#pc_s").checked});closeDr();toast(n?`Campaña registrada: ${fmt(n)} empresas`:"No hay empresas nuevas que registrar");pflush("list","res")}catch(e){}render()},
+ nueva(){drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>Nueva empresa</h2><p class="muted">Para prospectos que no están en la base del DENUE (referidos, clientes perdidos, etc.). Queda a tu nombre.</p><div class="panel"><div class="form">
+  <label class="fl full">Empresa<input class="f" id="pn_e"></label><label class="fl">Persona de contacto<input class="f" id="pn_c"></label><label class="fl">Cargo<input class="f" id="pn_ca"></label><label class="fl">Teléfono<input class="f" id="pn_t" inputmode="tel"></label><label class="fl">Correo<input class="f" id="pn_m" type="email"></label>
+  <label class="fl">Municipio<input class="f" id="pn_mu"></label><label class="fl">Lista<select class="f" id="pn_l">${Object.entries(LISTAS_P).filter(([k])=>k!=="renta"&&k!=="usados").map(([k,n])=>`<option value="${k}" ${k==="manual"?"selected":""}>${n}</option>`).join("")}</select></label>
+  <label class="fl full">Notas<textarea class="f" id="pn_n"></textarea></label></div><div class="row" style="margin-top:12px"><button class="btn pri" data-a="nuevaGo">Crear empresa</button></div></div>`,L=>bindCommon(L))},
+ async nuevaGo(_,L){const e=val(L,"#pn_e");if(!e){toast("Escribe el nombre de la empresa");return}
+  try{const l=await rpc("prosp_nueva",{p:{empresa:e,tel:val(L,"#pn_t"),email:val(L,"#pn_m"),mun:val(L,"#pn_mu"),lista:val(L,"#pn_l"),notas:val(L,"#pn_n"),contacto:{contacto:val(L,"#pn_c"),cargo:val(L,"#pn_ca")}}});pflush();openProsp(l.id)}catch(e){}},
+ async tarea(){const txt=($("#pt_txt").value||"").trim();if(!txt){toast("Escribe la tarea");return}const k={texto:txt,persona:$("#pt_who").value,fecha:$("#pt_fe").value||hoyP(),hecha:false,por:S.me.id,creada:Date.now()};
+  if(await save("tareas/"+uid(),k,k.persona===S.me.id?"Tarea añadida":"Tarea asignada a "+nombreP(k.persona)))render()},
+ async informe(){const [a,b]=rangoP(PR.dashP),R=PR.cache[`res:${a}:${b}:${PR.dashW}`];if(R)pdfInformeP(R,a,b)},
+ async guardarEquipo(){const m={...(crmCfg().miembros||{})};document.querySelectorAll("[data-pm]").forEach(el=>{const id=el.dataset.pm,k=el.dataset.k;m[id]=m[id]||{meta:0,calientes:5,frio:false};m[id][k]=el.type==="checkbox"?el.checked:+el.value||0});
+  Object.keys(m).forEach(id=>{if(m[id].activo===false&&!m[id].meta&&!m[id].frio)delete m[id]});await save("config/crm",{...crmCfg(),miembros:m},"Equipo guardado")},
+ async guardarMetas(){const g={};document.querySelectorAll("[data-pmeta]").forEach(el=>g[el.dataset.pmeta]=+el.value||0);await save("config/crm",{...crmCfg(),metas:g},"Metas guardadas")},
+ addRutina(){const r=[...rutinasDraft(),{id:uid(),persona:S.me.id,texto:"Nueva rutina",dias:[1,2,3,4,5]}];save("config/crm",{...crmCfg(),rutinas:r},"Rutina añadida")},
+ guardarRutinas(){save("config/crm",{...crmCfg(),rutinas:rutinasDraft().filter(r=>r.texto.trim())},"Rutinas guardadas")},
+ async importar(){const f=$("#pimp")?.files?.[0],m=$("#pimp_m");if(!f){toast("Elige el archivo");return}let d;try{d=JSON.parse(await f.text())}catch(e){toast("El archivo no es válido");return}
+  if(d.tipo!=="oa360-prospectos"||!Array.isArray(d.rows)){toast("Este no es el archivo de prospectos de OA 360");return}
+  let ok=0;const B=1000;for(let i=0;i<d.rows.length;i+=B){m.textContent=`Importando… ${fmt(Math.min(i+B,d.rows.length))} de ${fmt(d.rows.length)}`;try{ok+=await rpc("prosp_importar",{p_rows:d.rows.slice(i,i+B)})}catch(e){m.textContent="Se detuvo en la fila "+fmt(i)+". Vuelve a intentarlo: lo ya importado no se duplica.";return}}
+  if(d.config&&!S.crm?.miembros)await save("config/crm",d.config);m.textContent=`Listo: ${fmt(ok)} empresas nuevas (${fmt(d.rows.length-ok)} ya existían).`;pflush();toast("Base importada")}
+});
+function rutinasDraft(){const r=JSON.parse(JSON.stringify(crmCfg().rutinas||[]));document.querySelectorAll("[data-prp]").forEach(s=>r[+s.dataset.prp].persona=s.value);document.querySelectorAll("[data-prt]").forEach(s=>r[+s.dataset.prt].texto=s.value);
+  if(document.querySelector("[data-prd]")){r.forEach(x=>x.dias=[]);document.querySelectorAll("[data-prd]").forEach(c=>{if(c.checked)r[+c.dataset.prd].dias.push(+c.value)})}return r}
+function bindProsp(m){
+  m.querySelectorAll("[data-ptab]").forEach(b=>b.onclick=()=>{PR.tab=b.dataset.ptab;pflush({hoy:"hoy",empresas:"list",resultados:"res",equipo:"x"}[PR.tab],"cola");render()});
+  m.querySelectorAll("[data-pop]").forEach(x=>x.onclick=e=>{e.stopPropagation();openProsp(x.dataset.pop,x.dataset.pfocus==="1")});
+  m.querySelectorAll("[data-pf]").forEach(s=>s.onchange=()=>{PR.f={...PR.f,[s.dataset.pf]:s.value};PR.page=0;PR.sel.clear();render()});
+  const q=m.querySelector("[data-pq]");if(q){let t;q.oninput=()=>{clearTimeout(t);t=setTimeout(()=>{PR.f={...PR.f,q:q.value};PR.page=0;render();const n=$("#main [data-pq]");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}},350)}}
+  m.querySelectorAll("[data-ppg]").forEach(b=>b.onclick=()=>{PR.page+=+b.dataset.ppg;render();$("#main").scrollTop=0});
+  m.querySelectorAll("[data-psel]").forEach(c=>c.onchange=()=>{c.checked?PR.sel.add(c.dataset.psel):PR.sel.delete(c.dataset.psel);render()});
+  const sa=m.querySelector("[data-pselall]");if(sa)sa.onchange=()=>{m.querySelectorAll("[data-psel]").forEach(c=>sa.checked?PR.sel.add(c.dataset.psel):PR.sel.delete(c.dataset.psel));render()};
+  const pc=m.querySelector("[data-pcola]");if(pc)pc.onchange=()=>{PR.cola=pc.value;try{localStorage.setItem("oa_cola",PR.cola)}catch(e){}render()};
+  m.querySelectorAll("[data-pdp]").forEach(b=>b.onclick=()=>{PR.dashP=b.dataset.pdp;render()});
+  const dw=m.querySelector("[data-pdw]");if(dw)dw.onchange=()=>{PR.dashW=dw.value;render()};
+  m.querySelectorAll("[data-pchk]").forEach(c=>c.onchange=async()=>{const [k,id]=c.dataset.pchk.split(/:(.*)/);const t=hoyP();
+    if(k==="r"){const h={...((S.crmHechos||{})[S.me.id]||{}),[id]:c.checked};S.crmHechos={...(S.crmHechos||{}),[S.me.id]:h};await upd("crm_hechos/"+t,{[S.me.id]:h})}
+    else await upd("tareas/"+id,{hecha:c.checked,hechaEl:c.checked?t:""});if(c.checked)toast("Hecho");render()});
+  m.querySelectorAll("[data-pdeltarea]").forEach(b=>b.onclick=async()=>{try{await db.doc("tareas/"+b.dataset.pdeltarea).del();S.tareas.delete(b.dataset.pdeltarea);render()}catch(e){toast("Solo administración puede borrar tareas; márcala como hecha.")}});
+  m.querySelectorAll("[data-prx]").forEach(b=>b.onclick=()=>{const r=rutinasDraft();r.splice(+b.dataset.prx,1);save("config/crm",{...crmCfg(),rutinas:r},"Rutina quitada")});
+  m.querySelectorAll("[data-pa]").forEach(b=>b.onclick=()=>A[b.dataset.pa]&&A[b.dataset.pa](b.dataset.id,m));
+}
+function pdfInformeP(R,a,b){
+  const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"mm",format:"letter"});const E=R.embudo||{},M=metasP();
+  if(LOGO("oa"))d.addImage(LOGO("oa"),"JPEG",14,12,52,11.2);d.setTextColor(...NAVY);d.setFont("helvetica","bold");d.setFontSize(15);d.text("Informe comercial",202,18,{align:"right"});
+  d.setFont("helvetica","normal");d.setFontSize(9.5);d.text(`Del ${sdate(a)} al ${sdate(b)} ${b.slice(0,4)}${PR.dashW?" · "+nombreP(PR.dashW):" · todo el equipo"}`,202,24,{align:"right"});
+  let y=34;const kp=[["Empresas contactadas",R.contactadas],["Contactos uno a uno",R.uno_a_uno],["Envíos de campaña",R.masivos],["Respuestas positivas",E.conversacion||0],["Clientes nuevos",E.ganado||0],["Seguimientos vencidos",R.vencidos]];
+  kp.forEach(([k,v],i)=>{const x=14+(i%3)*63,yy=y+Math.floor(i/3)*20;d.setFillColor(...BAR);d.roundedRect(x,yy,60,17,2,2,"F");d.setFont("helvetica","bold");d.setFontSize(15);d.text(fmt(v),x+4,yy+8);d.setFont("helvetica","normal");d.setFontSize(8);d.text(k,x+4,yy+13.5)});
+  y+=46;cell(d,14,y,188,6,"Embudo",{fill:BAR,b:1,a:"c"});y+=6;PIPEP.forEach(s=>{cell(d,14,y,90,6,FUNP[s]);cell(d,104,y,49,6,fmt(E[s]||0),{a:"c"});cell(d,153,y,49,6,"meta mensual "+fmt(M[s]),{a:"c",s:7.5});y+=6});
+  y+=6;cell(d,14,y,188,6,"Canales",{fill:BAR,b:1,a:"c"});y+=6;Object.entries(R.canales||{}).forEach(([c,v])=>{cell(d,14,y,90,6,(CANP[c]||[,c])[1]);cell(d,104,y,49,6,fmt(v.n)+" contactos",{a:"c"});cell(d,153,y,49,6,fmt(v.pos)+" positivas",{a:"c"});y+=6});
+  y+=6;cell(d,14,y,188,6,"Equipo",{fill:BAR,b:1,a:"c"});y+=6;Object.entries(R.equipo||{}).forEach(([p,v])=>{cell(d,14,y,90,6,nombreP(p));cell(d,104,y,32,6,fmt(v.n)+" contactos",{a:"c",s:7.5});cell(d,136,y,33,6,fmt(v.emp)+" empresas",{a:"c",s:7.5});cell(d,169,y,33,6,fmt(v.pos)+" positivas",{a:"c",s:7.5});y+=6});
+  d.setFontSize(7.5);d.setTextColor(90);d.text("OA 360 · Office Automation · generado el "+fFecha(Date.now()),108,268,{align:"center"});savePdf(d,`Informe_comercial_${a}_${b}.pdf`)}
+
 /* ===================== arranque ===================== */
 function gate(html){S.gateOk=false;$("#nav").innerHTML="";$("#mnav").innerHTML="";$("#main").innerHTML=`<div class="gate">${html}</div>`}
 function decideRole(){
   const u=S.usuarios[S.me?.id];S.rol=S.owner?"admin":(u?.rol||null);
-  if(!S.rol){gate(`<div class="iso" style="justify-content:center;display:inline-grid;margin-bottom:14px"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:var(--k)"></i></div><h1 style="margin:0 0 8px">Te damos acceso en un momento</h1><p class="muted">Entraste como <code>${esc(S.me?.id||"")}</code>. Pídele a Toni que te asigne tu rol en OA 360; cuando lo haga, esta pantalla se abre sola.</p><p><button class="btn" onclick="logout()">Salir</button></p>`);return false}
+  if(!S.rol){gate(`<div class="iso" style="justify-content:center;display:inline-grid;margin-bottom:14px"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:var(--k)"></i></div><h1 style="margin:0 0 8px">Te damos acceso en un momento</h1><p class="muted">Entraste como <code>${esc(S.me?.id||"")}</code>. Pídele a Toni que te asigne tu rol en OA 360; cuando lo haga, esta pantalla se abre sola.</p><p><button class="btn pri" onclick="location.reload()">Ya me dieron acceso</button> <button class="btn" onclick="logout()">Salir</button></p>`);S.sinRol=true;return false}
+  if(S.sinRol){location.reload();return false} // la base de datos solo entrega datos con rol: recargar al recibirlo
   S.gateOk=true;return true;
 }
 function listen(path,map,lim=1000){db.collection(path).limit(lim).onSnapshot(s=>{map.clear();s.docs.forEach(d=>map.set(d.id,{...d.data(),_id:d.id}));S.ready[path]=true;if(S.gateOk)later()},e=>{console.warn(path,e)})}
@@ -653,6 +1153,7 @@ function mkDb(){
     async get(){const {data,error}=await sb.from("docs").select("data").eq("col",col).eq("id",id).maybeSingle();if(error)throw error;return snapDoc(id,data?.data)},
     async set(d){const {error}=await sb.from("docs").upsert({col,id,data:d,updated_at:new Date().toISOString()});if(error)throw error},
     async update(p){const {error}=await sb.rpc("doc_merge",{p_col:col,p_id:id,p_patch:p});if(error)throw error},
+    async del(){const {error}=await sb.from("docs").delete().eq("col",col).eq("id",id);if(error)throw error},
     onSnapshot(next,err){let cur=null;this.get().then(s=>{cur=s;next(s)}).catch(e=>err&&err(e));
       const f=(ev,r,nw)=>{if(!r||r.col!==col||r.id!==id)return;next(snapDoc(id,ev==="DELETE"?null:nw.data))};subs.add(f);return()=>subs.delete(f)}}};
   const collection=col=>{const q={limit:()=>q,
@@ -674,7 +1175,10 @@ async function start(session){
   db=mkDb();
   db.doc("config/usuarios").onSnapshot(s=>{S.usuarios=(s.exists&&s.data().u)||{};if(decideRole()){const u=S.usuarios[S.me.id];if(u?.alias)S.me.name=u.alias;$("#who").innerHTML=`<b>${esc(u?.alias||S.me.name)}</b>${esc(ROLES[S.rol]||"")}<div><a href="#" onclick="logout();return false" style="color:#8FA3BD;font-size:12.5px">Salir</a></div>`;render()}});
   db.doc("config/toner").onSnapshot(s=>{S.toner=(s.exists&&s.data().items)||[];if(S.gateOk)later()});
-  listen("clientes",S.clientes);listen("equipos",S.equipos);listen("tickets",S.tickets);listen("oportunidades",S.opps);listen("solicitudes",S.sol);listen("inventario",S.inv);
+  listen("clientes",S.clientes);listen("equipos",S.equipos);listen("tickets",S.tickets);listen("oportunidades",S.opps);listen("solicitudes",S.sol);listen("inventario",S.inv);listen("cotizaciones",S.cot);listen("tareas",S.tareas);
+  db.doc("config/crm").onSnapshot(s=>{S.crm=(s.exists&&s.data())||null;if(S.gateOk)later()});
+  db.doc("crm_hechos/"+new Date(Date.now()+TZ).toISOString().slice(0,10)).onSnapshot(s=>{S.crmHechos=(s.exists&&s.data())||{};if(S.gateOk)later()});
+  db.doc("config/empresa").onSnapshot(s=>{S.empresa=(s.exists&&s.data())||{}});
 }
 (async()=>{
   const C=window.OA_CONFIG||{};
