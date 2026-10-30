@@ -158,7 +158,7 @@ canvas.sig{width:100%;height:170px;background:#fff;border:1px dashed var(--muted
 <body>
 <div class="app" id="app">
   <aside>
-    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation</small></div></div>
+    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.7 · 30 oct</span></small></div></div>
     <nav id="nav"></nav>
     <div class="who" id="who">Conectando…</div>
   </aside>
@@ -719,7 +719,45 @@ function pdfCot(q){
 }
 
 /* Propuesta de arrendamiento (presentación de 5 láminas) */
+/* Propuesta de arrendamiento en una sola hoja carta */
 function pdfArr(q){
+  const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"mm",format:"letter"});const E=EMP();const DK=[23,40,62],TEAL=[58,175,201],BLUE=[27,94,150],GR=[91,107,127];
+  const color=!!q.color,plazo=+q.plazo||36,est=q.estadoEq||"seminuevo";const bn=+q.clicBN||0,co=+q.clicColor||0,ib=+q.incBN||0,ic=+q.incColor||0;
+  // encabezado
+  d.setFillColor(...DK);d.rect(0,0,216,38,"F");d.setFillColor(...TEAL);d.rect(0,38,216,1.6,"F");
+  d.setFillColor(255,255,255);d.roundedRect(12,9,60,20,2,2,"F");if(LOGO("oa"))d.addImage(LOGO("oa"),"JPEG",15,12.5,54,11.6);
+  d.setTextColor(255,255,255);d.setFont("helvetica","bold");d.setFontSize(17);d.text("Propuesta de arrendamiento",204,17,{align:"right"});
+  d.setFont("helvetica","normal");d.setFontSize(9.5);d.setTextColor(200,212,226);d.text(`Folio ${q.folio||""}  ·  ${fFecha(q.fecha)}  ·  Vigencia: 15 días`,204,24,{align:"right"});d.text(`WhatsApp ${E.waTxt}  ·  ${E.correo}`,204,30,{align:"right"});
+  let y=50;d.setTextColor(...GR);d.setFontSize(8.5);d.text("PREPARADA PARA",14,y);d.setTextColor(...DK);d.setFont("helvetica","bold");d.setFontSize(14);d.text(String(q.empresa||""),14,y+6,{maxWidth:120});
+  d.setFont("helvetica","normal");d.setFontSize(10);if(q.atencion)d.text("Atención: "+q.atencion,14,y+12);
+  // equipo
+  y=72;d.setFont("helvetica","bold");d.setFontSize(8.5);d.setTextColor(...BLUE);d.text("EQUIPO PROPUESTO",14,y);d.setTextColor(...DK);d.setFontSize(15);d.text(String(q.modelo||""),14,y+7,{maxWidth:188});
+  d.setFont("helvetica","normal");d.setFontSize(9.5);d.setTextColor(...GR);d.text(`Multifuncional ${color?"a color":"blanco y negro"} ${est}${est!=="nuevo"?", revisado por nuestro equipo técnico":""}`,14,y+13);
+  const chips=[q.ppm&&q.ppm+" ppm",q.formato==="A3"?"Doble carta (A3)":"Carta / oficio",q.duplex!==false&&"Dúplex",color?"Color":"Blanco y negro","Escáner"].filter(Boolean);
+  let cx=14;d.setFontSize(9);chips.forEach(c=>{const w=d.getTextWidth(c)+8;d.setFillColor(235,241,248);d.roundedRect(cx,y+17,w,7,3.5,3.5,"F");d.setTextColor(...DK);d.text(c,cx+4,y+21.8);cx+=w+3});
+  // propuesta económica
+  y=110;d.setFont("helvetica","bold");d.setFontSize(8.5);d.setTextColor(...BLUE);d.text(`PROPUESTA ECONÓMICA  ·  CONTRATO DE ${plazo} MESES  ·  PRECIOS MÁS IVA`,14,y);
+  const cards=[["RENTA MENSUAL",money(q.renta),"MXN + IVA",DK,true]];if(bn)cards.push(["IMPRESIÓN B/N",mxn(bn),ib?`por página · ${fmt(ib)} incluidas al mes`:"por página impresa",[228,239,249]]);
+  if(color&&co)cards.push(["IMPRESIÓN COLOR",mxn(co),ic?`por página · ${fmt(ic)} incluidas al mes`:"por página impresa",[230,245,240]]);if(!bn&&!co&&(ib||ic))cards.push(["PÁGINAS INCLUIDAS",fmt(ib+ic),"al mes dentro de la renta",[228,239,249]]);
+  const cw=cards.length===1?92:(188-(cards.length-1)*5)/cards.length;cards.forEach(([l,v,sub,fill,dark],i)=>{const x=14+i*(cw+5);d.setFillColor(...fill);d.roundedRect(x,y+4,cw,30,3,3,"F");
+    d.setFont("helvetica","bold");d.setFontSize(8);d.setTextColor(...(dark?TEAL:BLUE));d.text(l,x+6,y+12);d.setFontSize(20);d.setTextColor(...(dark?[255,255,255]:DK));d.text(v,x+6,y+23);
+    d.setFont("helvetica","normal");d.setFontSize(8);d.setTextColor(...(dark?[200,212,226]:GR));d.text(sub,x+6,y+29.5,{maxWidth:cw-10})});
+  d.setFontSize(8.5);d.setTextColor(...GR);d.text(bn||co?"La renta se factura por separado del consumo; las impresiones se cobran según el contador del equipo al cierre de cada mes.":"Renta mensual fija conforme al contrato.",14,y+41,{maxWidth:188});
+  // qué incluye
+  y=160;d.setFont("helvetica","bold");d.setFontSize(8.5);d.setTextColor(...BLUE);d.text("QUÉ INCLUYE",14,y);
+  const inc=["Tóner y consumibles, con envío y stock en su oficina","Mantenimiento preventivo según su volumen de impresión","Servicio correctivo y refacciones","Monitoreo remoto de contadores y tóner (KFS) sin costo","Atención por WhatsApp o correo, lunes a viernes de 9:00 a 18:00","Reporte en la mañana: atención esa misma tarde; por la tarde: primer servicio del día siguiente","Reemplazo del equipo al día siguiente si no se puede reparar","Instalación, configuración y capacitación: "+(q.instalacion||"por coordinar con el cliente"),q.respaldo&&"Equipo de respaldo sin costo adicional"].filter(Boolean);
+  d.setFont("helvetica","normal");d.setFontSize(9);d.setTextColor(...DK);let yy=y+7;
+  for(let i=0;i<inc.length;i+=2){const par=[inc[i],inc[i+1]].filter(Boolean).map(t=>d.splitTextToSize(t,86));par.forEach((l,k)=>{const x=14+k*95;d.setFillColor(...TEAL);d.circle(x+1.3,yy-1.2,1.1,"F");d.text(l,x+4.5,yy)});yy+=Math.max(...par.map(l=>l.length))*4+3.2}
+  // condiciones
+  y=yy+3;d.setFont("helvetica","bold");d.setFontSize(8.5);d.setTextColor(...BLUE);d.text("CONDICIONES",14,y);
+  const cond=[`Equipo ${est}, sujeto a disponibilidad${est!=="nuevo"?" y revisión técnica":""}.`,`Plazo de ${plazo} meses; facturación mensual con crédito de 30 días.`,"Precios más IVA; ajuste anual conforme a la inflación.","No incluye papel.",...String(q.notas||"").split("\n").map(x=>x.trim()).filter(Boolean)];
+  d.setFont("helvetica","normal");d.setFontSize(9);d.setTextColor(...DK);d.text(d.splitTextToSize(cond.join("  ·  "),188),14,y+6);
+  // aceptación
+  y=238;d.setDrawColor(200);d.setLineWidth(.3);d.roundedRect(14,y,188,22,2,2);d.setFont("helvetica","bold");d.setFontSize(8.5);d.setTextColor(...BLUE);d.text("ACEPTACIÓN DE LA PROPUESTA",18,y+6);
+  d.setFont("helvetica","normal");d.setFontSize(8);d.setTextColor(...GR);[["Nombre",18],["Firma",80],["Fecha",142]].forEach(([l,x])=>{d.line(x,y+16,x+56,y+16);d.text(l,x,y+20)});
+  d.setFontSize(7.5);d.text(`${E.nombre}  ·  ${E.dir}  ·  ${E.web}`,108,271,{align:"center",maxWidth:190});
+  savePdf(d,"Propuesta_"+q.folio+".pdf")}
+function pdfArrPres(q){
   const {jsPDF}=window.jspdf;const d=new jsPDF({unit:"pt",format:[959.76,540],orientation:"landscape"});const E=EMP();
   const W=959.76,DK=[23,40,62],TEAL=[58,175,201],BLUE=[27,94,150],LT=[243,246,249],GR=[91,107,127];
   const color=!!q.color,plazo=+q.plazo||24,est=q.estadoEq||"seminuevo";
@@ -798,6 +836,7 @@ function bindCommon(root){
   root.querySelectorAll("[data-st]").forEach(x=>x.onclick=()=>{const t=S.tickets.get(x.dataset.st);upd("tickets/"+t._id,stPatch(t,x.dataset.v),x.dataset.v==="en_camino"?"Avisado: vas en camino":"Llegada registrada")});
   root.querySelectorAll("[data-prev]").forEach(x=>x.onclick=()=>{const e=S.equipos.get(x.dataset.prev);nuevoTicket({equipoId:e._id,tipo:"Preventivo",desc:"Mantenimiento preventivo programado ("+e.frec+")."})});
   root.querySelectorAll("[data-cotpdf]").forEach(x=>x.onclick=()=>{const q=S.cot.get(x.dataset.cotpdf);(q.tipo==="arrendamiento"?pdfArr:pdfCot)(q)});
+  root.querySelectorAll("[data-cotpres]").forEach(x=>x.onclick=()=>pdfArrPres(S.cot.get(x.dataset.cotpres)));
   root.querySelectorAll("[data-cotedit]").forEach(x=>x.onclick=()=>cotForm(x.dataset.cotedit));
   root.querySelectorAll("[data-cotdup]").forEach(x=>x.onclick=()=>{const q={...S.cot.get(x.dataset.cotdup)};delete q._id;delete q.folio;q.estado="borrador";q.fecha=Date.now();cotForm(null,q.tipo,q)});
   root.querySelectorAll("[data-vale]").forEach(x=>x.onclick=()=>pdfVale(S.sol.get(x.dataset.vale)));
@@ -896,7 +935,7 @@ function vCotiz(){
   <div class="panel wrap"><table class="tbl"><tr><th>Folio</th><th>Tipo</th><th>Empresa</th><th>Fecha</th><th>Importe</th><th>Estado</th><th></th></tr>
   ${Q.map(q=>`<tr><td class="b" style="white-space:nowrap">${esc(q.folio)}</td><td>${q.tipo==="arrendamiento"?"Arrendamiento":"Cotización"}<div class="muted sm">${esc(q.tipo==="arrendamiento"?q.modelo||"":q.asunto||"")}</div></td><td>${esc(q.empresa)}${q.atencion?`<div class="muted sm">${esc(q.atencion)}</div>`:""}</td><td class="sm">${fd(q.fecha)}</td>
    <td>${money(cotTotal(q))}${q.tipo==="arrendamiento"?"/mes":""}</td><td><select class="f" data-cotst="${esc(q._id)}" ${canW()?"":"disabled"}>${COT_EST.map(x=>`<option ${q.estado===x?"selected":""}>${x}</option>`).join("")}</select></td>
-   <td class="row"><button class="btn sm" data-cotpdf="${esc(q._id)}">PDF</button>${canW()?`<button class="btn sm" data-cotedit="${esc(q._id)}">Editar</button><button class="btn sm" data-cotdup="${esc(q._id)}">Duplicar</button>`:""}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">Aún no hay cotizaciones.</td></tr>`}</table></div>`;
+   <td class="row"><button class="btn sm" data-cotpdf="${esc(q._id)}">PDF</button>${q.tipo==="arrendamiento"?`<button class="btn sm" data-cotpres="${esc(q._id)}" title="Versión presentación de 5 láminas">Presentación</button>`:""}${canW()?`<button class="btn sm" data-cotedit="${esc(q._id)}">Editar</button><button class="btn sm" data-cotdup="${esc(q._id)}">Duplicar</button>`:""}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">Aún no hay cotizaciones.</td></tr>`}</table></div>`;
 }
 function cotForm(id,tipo,base){
   const q=base||(id?S.cot.get(id):null)||{tipo,fecha:Date.now(),estado:"borrador",plazo:24,estadoEq:"seminuevo",formato:"A3",duplex:true,color:true,ppm:"",marcas:{},partidas:[{cant:1,desc:"",precio:""}]};
@@ -919,6 +958,7 @@ function cotForm(id,tipo,base){
    <label class="fl">Páginas B/N incluidas al mes<input class="f" id="q_ib" type="number" value="${esc(q.incBN||0)}"></label>
    <label class="fl">Páginas color incluidas al mes<input class="f" id="q_ic" type="number" value="${esc(q.incColor||0)}"></label>
    <label class="fl full">Instalación y configuración inicial<input class="f" id="q_in" value="${esc(q.instalacion||"por coordinar con el cliente")}"></label>
+   <label class="fl row" style="flex-direction:row;align-items:center"><input type="checkbox" id="q_rs" ${q.respaldo?"checked":""}> Incluye equipo de respaldo sin costo</label>
    <label class="fl full">Condiciones adicionales (una por línea)<textarea class="f" id="q_no">${esc(q.notas||"")}</textarea></label>`
   :`${comun}
    <label class="fl full">Asunto<input class="f" id="q_as" value="${esc(q.asunto||"")}" placeholder="Cotización de mantenimiento para Kyocera."></label>
@@ -929,13 +969,13 @@ function cotForm(id,tipo,base){
    <label class="fl row" style="flex-direction:row;align-items:center"><input type="checkbox" id="q_si" ${q.sinIva?"checked":""}> Sin IVA</label>
    <label class="fl full">Notas, condiciones y vigencia<textarea class="f" id="q_no" placeholder="Precios en pesos mexicanos. Vigencia de 15 días.">${esc(q.notas||"")}</textarea></label>
    <label class="fl full">Firma (nombre y cargo, opcional)<input class="f" id="q_fi" value="${esc(q.firma||"")}"></label>`;
-  drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>${id?esc(q.folio):arr?"Nueva propuesta de arrendamiento":"Nueva cotización"}</h2><p class="muted">${arr?"Genera la presentación de 5 láminas: portada, la solución, propuesta económica, servicio incluido y condiciones.":"Precios unitarios sin IVA; el IVA (16%) se calcula solo."}</p>
+  drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>${id?esc(q.folio):arr?"Nueva propuesta de arrendamiento":"Nueva cotización"}</h2><p class="muted">${arr?"Para rentar un equipo: renta mensual + precio por impresión. Genera una hoja carta lista para enviar (y, si la quieres, una presentación de 5 láminas).":"Para vender algo con precio cerrado (seminuevo, tóner, refacciones, mantenimiento por evento): partidas con IVA calculado solo."}</p>
    <div class="panel"><div class="form">${campos}</div><div class="row" style="margin-top:14px"><button class="btn pri" data-a="saveCot" data-id="${esc(id||"")}" data-t="${arr?"arrendamiento":"cotizacion"}">Guardar</button><button class="btn" data-a="saveCotPdf" data-id="${esc(id||"")}" data-t="${arr?"arrendamiento":"cotizacion"}">Guardar y descargar PDF</button></div></div>`,L=>{bindCommon(L);bindCotRows(L)});
 }
 function cotRow(p){return `<div class="row" data-qrow style="margin-bottom:8px;align-items:flex-start"><input class="f" data-qc type="number" min="0" step="any" value="${esc(p.cant??1)}" style="width:70px" aria-label="Cantidad"><textarea class="f" data-qd style="flex:1;min-width:200px;min-height:60px" placeholder="Descripción del producto o servicio" aria-label="Descripción">${esc(p.desc||"")}</textarea><input class="f" data-qp type="number" step="0.01" value="${esc(p.precio??"")}" placeholder="Precio unitario" style="width:120px" aria-label="Precio unitario"><button class="btn sm" data-qdel title="Quitar partida">✕</button></div>`}
 function cotData(L,tipo){const num=s=>{const v=val(L,s);return v===""?"":+v};const fe=val(L,"#q_fe");
   const d={tipo,empresa:val(L,"#q_emp"),atencion:val(L,"#q_at"),fecha:fe?new Date(fe+"T12:00:00-06:00").getTime():Date.now(),notas:val(L,"#q_no")};
-  if(tipo==="arrendamiento")Object.assign(d,{modelo:val(L,"#q_mo"),estadoEq:val(L,"#q_ee"),ppm:val(L,"#q_pp"),formato:val(L,"#q_fo"),duplex:L.querySelector("#q_du").checked,color:L.querySelector("#q_co").checked,plazo:+val(L,"#q_pl")||24,renta:num("#q_re"),clicBN:num("#q_cb"),clicColor:num("#q_cc"),incBN:+val(L,"#q_ib")||0,incColor:+val(L,"#q_ic")||0,instalacion:val(L,"#q_in")});
+  if(tipo==="arrendamiento")Object.assign(d,{modelo:val(L,"#q_mo"),estadoEq:val(L,"#q_ee"),ppm:val(L,"#q_pp"),formato:val(L,"#q_fo"),duplex:L.querySelector("#q_du").checked,color:L.querySelector("#q_co").checked,plazo:+val(L,"#q_pl")||24,renta:num("#q_re"),clicBN:num("#q_cb"),clicColor:num("#q_cc"),incBN:+val(L,"#q_ib")||0,incColor:+val(L,"#q_ic")||0,instalacion:val(L,"#q_in"),respaldo:L.querySelector("#q_rs").checked});
   else Object.assign(d,{asunto:val(L,"#q_as"),marcas:{kyocera:L.querySelector("#q_mk").checked,konica:L.querySelector("#q_mm").checked},banco:L.querySelector("#q_bc").checked,sinIva:L.querySelector("#q_si").checked,firma:val(L,"#q_fi"),
     partidas:[...L.querySelectorAll("[data-qrow]")].map(r=>({cant:+r.querySelector("[data-qc]").value||0,desc:r.querySelector("[data-qd]").value.trim(),precio:+r.querySelector("[data-qp]").value||0})).filter(p=>p.desc||p.precio)});
   return d}
