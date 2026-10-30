@@ -51,6 +51,8 @@ main{overflow:auto;padding:26px 30px 90px}
 .btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.wa{background:#1FA855;border-color:#1FA855;color:#fff}
 .btn.sm{padding:5px 10px;font-size:13px}
+.mst{white-space:pre-wrap;font-size:14px;line-height:1.5;margin:6px 0 12px;overflow-wrap:anywhere}.msg{display:flex;flex-direction:column}.msg .mst:last-of-type{flex:1}mark.ph{background:#FFF3C4;color:#7A5600;border-radius:4px;padding:0 3px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) mark.ph{background:#4A3B07;color:#FFD966}}:root[data-theme="dark"] mark.ph{background:#4A3B07;color:#FFD966}
 .btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
 .panel h2{margin:0 0 12px;font-size:16.5px;font-weight:700}
@@ -158,7 +160,7 @@ canvas.sig{width:100%;height:170px;background:#fff;border:1px dashed var(--muted
 <body>
 <div class="app" id="app">
   <aside>
-    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.7 · 30 oct</span></small></div></div>
+    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.10 · 30 oct</span></small></div></div>
     <nav id="nav"></nav>
     <div class="who" id="who">Conectando…</div>
   </aside>
@@ -210,13 +212,73 @@ const ETAPAS=[["nuevo","Nuevo"],["contactado","Contactado"],["diagnostico","Diag
 const CHECK=["Página de estado","Alimentador","Cristales","Gomas","Fusor","Limpieza de chasis","Bote residual (vaciar)","Limpieza general de tapas"];
 const FINAL=["Cerrado","Refacciones","Software","Capacitación","Cambio de equipo","Abierto"];
 const EMPRESA={nombre:"OFFICE AUTOMATION S.A. DE C.V.",dir:"Av. de los Reyes 12, MZ 018, Residencial El Dorado, 54020 Tlalnepantla de Baz, Edo. de México",wa:"5627606710",web:"www.officeautomation.com.mx",correo:"servicio@officeautomation.com.mx",waTxt:"56 2760 6710",rfc:"OAU980713BW3"};
+const MSG_CATS=[["servicio","Servicio"],["toner","Tóner"],["clientes","Clientes"],["cotiz","Cotizaciones"],["prosp","Prospección"],["venta","Seminuevos"],["cobranza","Cobranza"],["equipo","Equipo"],["encuestas","Encuestas"]];
 const PLANTILLAS=[
- {id:"recibido",n:"Ticket recibido",t:"Hola {contacto}, recibimos su reporte del equipo {modelo} (serie {serie}) en {cliente}. Folio {folio}. Compromiso de atención: {compromiso}. Office Automation."},
- {id:"camino",n:"Técnico en camino",t:"Hola {contacto}, {tecnico} va en camino a {cliente} para atender el folio {folio}. Office Automation."},
- {id:"cerrado",n:"Servicio cerrado + encuesta",t:"Hola {contacto}, cerramos el servicio {folio} de su equipo {modelo}. ¿Cómo calificaría la atención: excelente, buena, regular o mala? Su respuesta nos ayuda a mejorar. Office Automation."},
- {id:"toner",n:"Tóner enviado",t:"Hola {contacto}, le enviamos el tóner solicitado para {cliente} (vale {folio}). Cualquier duda, por aquí. Office Automation."},
- {id:"contador",n:"Recordatorio de lectura de contador",t:"Hola {contacto}, para la factura de este mes, ¿nos comparte la lectura de contador de sus equipos? Puede ser foto de la hoja de contador. Gracias. Office Automation."},
- {id:"renovacion",n:"Aviso de renovación (90 días)",t:"Hola {contacto}, su contrato con Office Automation termina pronto. Nos gustaría revisar con usted la renovación y, si conviene, actualizar sus equipos. ¿Agendamos una llamada?"}
+ // ---------- Servicio
+ {id:"recibido",cat:"servicio",n:"Ticket recibido",t:"Hola {contacto}, recibimos su reporte del equipo {modelo} (serie {serie}) en {cliente}. Su folio es *{folio}*. Compromiso de atención: {compromiso}. Office Automation."},
+ {id:"cita",cat:"servicio",n:"Visita programada",t:"Hola {contacto}, le confirmamos la visita de servicio para el equipo {modelo} en {cliente} el *{fecha}*. Le atiende {tecnico}. Folio {folio}.\nSi necesita cambiar el horario, responda este mensaje. Office Automation."},
+ {id:"camino",cat:"servicio",n:"Técnico en camino",t:"Hola {contacto}, {tecnico} va en camino a {cliente} para atender el folio {folio}. Office Automation."},
+ {id:"remoto",cat:"servicio",n:"Intentar resolver a distancia",t:"Hola {contacto}, sobre el folio {folio}: muchas fallas se resuelven en minutos sin esperar la visita. ¿Nos puede mandar una foto de la pantalla del equipo con el mensaje o código de error? Si no se resuelve así, el técnico va como está programado."},
+ {id:"refaccion",cat:"servicio",n:"Esperando refacción",t:"Hola {contacto}, su equipo {modelo} (folio {folio}) necesita una refacción que ya solicitamos. En cuanto llegue le avisamos para programar la instalación.\nSi el equipo le hace falta mientras tanto, le instalamos uno de respaldo sin costo. Office Automation."},
+ {id:"cerrado",cat:"servicio",n:"Servicio cerrado + encuesta",t:"Hola {contacto}, cerramos el servicio *{folio}* de su equipo {modelo}. Gracias por su confianza.\n¿Nos ayuda con 1 minuto para calificar la visita de {tecnico}? {encuesta}\nSi algo no quedó bien, responda este mensaje y lo atendemos. Office Automation."},
+ {id:"encuesta_rec",cat:"servicio",n:"Recordatorio de encuesta",t:"Hola {contacto}, una sola pregunta: ¿quedó bien atendido en el servicio {folio}? Su opinión nos ayuda a mejorar (1 minuto): {encuesta}\nGracias. Office Automation."},
+ {id:"queja",cat:"servicio",n:"Respuesta a una queja",t:"Hola {contacto}, gracias por avisarnos y lamentamos lo ocurrido con el servicio {folio}. Ya lo estamos revisando con el área técnica y yo le doy seguimiento personal.\nHoy le llamo para acordar la solución. {firma}, Office Automation."},
+ {id:"preventivo",cat:"servicio",n:"Mantenimiento preventivo programado",t:"Hola {contacto}, toca el mantenimiento preventivo de su equipo {modelo} en {cliente}. Lo tenemos programado para el *{fecha}* (incluido en su renta, sin costo).\nDurante la visita el equipo queda fuera de uso un rato. ¿Le funciona ese horario?"},
+ {id:"portal",cat:"servicio",n:"Cómo reportar una falla",t:"Para reportar una falla o pedir tóner:\n• WhatsApp {wa}\n• En línea: {portal}\nTenga a la mano el número de serie (etiqueta trasera del equipo o en la hoja de contador).\nHorario: lunes a viernes de 9:00 a 18:00. Si reporta por la mañana, le atendemos esa misma tarde; si reporta por la tarde, es el primer servicio del día siguiente."},
+ // ---------- Tóner y lecturas
+ {id:"toner_rec",cat:"toner",n:"Pedido de tóner recibido",t:"Hola {contacto}, recibimos su pedido de tóner para el equipo {modelo} (folio {folio}). Se lo entregamos el {fecha}. El tóner está incluido en su renta. Office Automation."},
+ {id:"toner",cat:"toner",n:"Tóner enviado",t:"Hola {contacto}, le enviamos el tóner solicitado para {cliente} (vale {folio}). Cuando lo reciba, ¿nos confirma por aquí? Si necesita ayuda para colocarlo, le guiamos. Office Automation."},
+ {id:"toner_resid",cat:"toner",n:"Devolver cartuchos vacíos",t:"Hola {contacto}, cuando cambie el tóner, por favor guarde el cartucho vacío y el bote residual. El técnico los recoge en la próxima visita para su reciclaje. Gracias. Office Automation."},
+ {id:"contador",cat:"toner",n:"Lectura de contador (WhatsApp)",t:"Hola {contacto}, para la factura de este mes, ¿nos comparte la lectura de contador de sus equipos? Basta con una foto de la hoja de contador o de la pantalla. Gracias. Office Automation."},
+ {id:"contador_mail",cat:"toner",n:"Lectura de contador (correo)",asunto:"Lectura de contador de {mes} · {cliente}",t:"Hola {contacto}:\n\nPara emitir la factura de {mes} necesitamos la lectura de contador de sus equipos.\n\nPuede responder este correo con una foto de la hoja de contador de cada equipo o de la pantalla donde aparece el total.\n\nNos ayuda mucho recibirla antes del {fecha}.\n\nGracias,\n{firma}\nOffice Automation · WhatsApp {wa}"},
+ // ---------- Clientes
+ {id:"bienvenida",cat:"clientes",n:"Bienvenida a nuevo cliente",t:"Hola {contacto}, bienvenido a Office Automation. Gracias por confiar en nosotros.\nPara cualquier falla, tóner o duda escríbanos a este WhatsApp ({wa}) o reporte en {portal}.\nIncluye tóner, mantenimiento y refacciones; solo pone el papel. Si un equipo falla y no se puede reparar en el momento, le ponemos uno de respaldo sin costo."},
+ {id:"docs_wa",cat:"clientes",n:"Documentos para el contrato (WhatsApp)",t:"Hola {contacto}, para preparar su contrato necesitamos (en PDF o foto legible):\n1. Acta constitutiva\n2. Constancia de situación fiscal\n3. Comprobante de domicilio\n4. Identificación oficial del representante legal\n5. Poder del representante legal (si no viene en el acta)\nPuede mandarlos por aquí o a {correo}. Gracias."},
+ {id:"docs_mail",cat:"clientes",n:"Documentos para el contrato (correo)",asunto:"Documentos para su contrato · Office Automation",t:"Hola {contacto}:\n\nGracias por elegir Office Automation. Para elaborar el contrato de {cliente} necesitamos los siguientes documentos en PDF o foto legible:\n\n1. Acta constitutiva\n2. Constancia de situación fiscal\n3. Comprobante de domicilio (no mayor a 3 meses)\n4. Identificación oficial vigente del representante legal\n5. Poder del representante legal (si no aparece en el acta)\n\nCon los documentos completos preparamos el contrato y la instalación queda aproximadamente 7 días después de la firma.\n\nQuedo atento a cualquier duda.\n\n{firma}\nOffice Automation · WhatsApp {wa} · {web}"},
+ {id:"docs_falta",cat:"clientes",n:"Falta un documento",t:"Hola {contacto}, ya recibimos sus documentos, gracias. Solo nos falta: *{documento}*. En cuanto lo tengamos, le mandamos el contrato para firma."},
+ {id:"instalacion",cat:"clientes",n:"Instalación programada",t:"Hola {contacto}, su instalación está programada para el *{fecha}* en {cliente}. Le atiende {tecnico}.\nPara que quede lista en una sola visita, por favor tenga:\n• Contacto eléctrico cerca (de preferencia con regulador)\n• Nodo de red o datos del Wi-Fi\n• Una persona de sistemas o quien conozca las computadoras que van a imprimir\nAl terminar, el técnico les enseña a usar el equipo."},
+ {id:"post_inst",cat:"clientes",n:"Seguimiento a la semana de instalar",t:"Hola {contacto}, hace una semana instalamos su equipo {modelo}. ¿Cómo le ha funcionado? ¿Todas las computadoras imprimen y escanean bien? Si hace falta configurar algo, lo hacemos a distancia."},
+ {id:"renovacion",cat:"clientes",n:"Aviso de renovación (WhatsApp)",t:"Hola {contacto}, su contrato con Office Automation termina el {fecha}. Nos gustaría revisar con usted la renovación y, si conviene, actualizar sus equipos por modelos más nuevos. ¿Agendamos una llamada de 15 minutos?"},
+ {id:"renovacion_mail",cat:"clientes",n:"Aviso de renovación (correo)",asunto:"Renovación de su contrato · {cliente}",t:"Hola {contacto}:\n\nSu contrato de arrendamiento con Office Automation vence el {fecha}.\n\nAntes de esa fecha nos gustaría revisar con usted:\n• Cuánto imprime hoy y si el plan actual sigue siendo el adecuado\n• Si conviene cambiar a equipos más nuevos\n• Cualquier ajuste que necesite en el servicio\n\n¿Le parece una llamada o visita de 15 minutos esta semana o la próxima?\n\nSaludos,\n{firma}\nOffice Automation · WhatsApp {wa}"},
+ {id:"referidos",cat:"clientes",n:"Pedir un referido",t:"Hola {contacto}, gracias por seguir con nosotros. ¿Conoce alguna empresa que esté rentando impresoras o que tenga equipos propios que le den problemas? Si nos comparte su contacto, la atendemos con el mismo cuidado que a usted."},
+ {id:"resena",cat:"clientes",n:"Pedir reseña en Google",t:"Hola {contacto}, nos da gusto que el servicio le haya funcionado. ¿Nos regalaría una reseña en Google? Nos ayuda mucho a que otras empresas nos conozcan: {liga}\nGracias. Office Automation."},
+ {id:"aviso",cat:"clientes",n:"Aviso de horario (días festivos)",t:"Hola {contacto}, le avisamos que el {fecha} no habrá servicio en oficina por día festivo. Los reportes que lleguen por WhatsApp ({wa}) o en {portal} se atienden el siguiente día hábil a primera hora. Office Automation."},
+ // ---------- Cotizaciones
+ {id:"cot_wa",cat:"cotiz",n:"Envío de propuesta (WhatsApp)",t:"Hola {contacto}, como quedamos, le comparto la propuesta *{folio}* para {cliente}.\nEn resumen: renta de {monto} al mes con tóner, mantenimiento y refacciones incluidos; solo pone el papel. Si un equipo falla, le ponemos uno de respaldo sin costo.\n¿La revisamos juntos en una llamada de 10 minutos?"},
+ {id:"cot_mail",cat:"cotiz",n:"Envío de propuesta (correo)",asunto:"Propuesta {folio} · Arrendamiento de equipos para {cliente}",t:"Hola {contacto}:\n\nGracias por su tiempo. Adjunto la propuesta {folio} para {cliente}.\n\nLo más importante:\n• Renta mensual: {monto} + precio por impresión según el plan\n• Incluye tóner, mantenimiento preventivo y correctivo, refacciones y software\n• Servicio: si reporta en la mañana, le atendemos esa misma tarde\n• Equipo de respaldo sin costo si una reparación tarda\n• Sin depósito en garantía; la renta es 100% deducible\n\nLa instalación queda aproximadamente 7 días después de firmar.\n\n¿Le parece si la revisamos en una llamada breve? Puedo el día y hora que le acomode.\n\nSaludos,\n{firma}\nOffice Automation · WhatsApp {wa} · {web}"},
+ {id:"cot_seg1",cat:"cotiz",n:"Seguimiento a 2 días",t:"Hola {contacto}, ¿pudo revisar la propuesta {folio}? Si tiene alguna duda sobre el precio por impresión o lo que incluye, se la resuelvo por aquí."},
+ {id:"cot_seg2",cat:"cotiz",n:"Seguimiento a 5 días",t:"Hola {contacto}, le escribo por la propuesta {folio}. Un dato que suele ayudar: con la renta ya no paga tóner, refacciones ni visitas técnicas por separado, y la renta es 100% deducible.\nSi quiere, le preparo una comparación con lo que gasta hoy. ¿Me comparte cuánto paga al mes?"},
+ {id:"cot_seg3",cat:"cotiz",n:"Seguimiento a 10 días (último)",t:"Hola {contacto}, no quiero insistir de más. ¿Sigue en pie el proyecto de impresión para {cliente}, o lo dejamos para más adelante? Con un sí o un no me ayuda a organizarme. Gracias."},
+ {id:"cot_ajuste",cat:"cotiz",n:"Ajustar la propuesta",t:"Hola {contacto}, gracias por sus comentarios. Para ajustar la propuesta {folio}, ¿me confirma cuántas impresiones hacen al mes (blanco y negro y color) y si necesitan escanear o imprimir doble carta? Con eso le mando una versión nueva hoy mismo."},
+ {id:"cot_ok",cat:"cotiz",n:"Propuesta aceptada",t:"Hola {contacto}, ¡gracias por la confianza! Siguientes pasos:\n1. Nos manda los documentos para el contrato (le paso la lista)\n2. Firmamos el contrato\n3. Instalamos en unos 7 días y capacitamos a su equipo\nBienvenido a Office Automation."},
+ {id:"cot_no",cat:"cotiz",n:"Propuesta no aceptada",t:"Hola {contacto}, gracias por considerarnos y por avisarme. Si más adelante cambia algo con su proveedor actual o necesita equipos adicionales, aquí estamos. ¿Me permite escribirle en unos meses para saber cómo va?"},
+ // ---------- Prospección
+ {id:"pr_llamada_wa",cat:"prosp",n:"Después de la llamada (WhatsApp)",t:"Hola {contacto}, soy {firma} de Office Automation; acabamos de hablar por teléfono. Le dejo mi WhatsApp para lo que necesite.\nSomos distribuidores Kyocera y Konica Minolta: rentamos impresoras y multifuncionales con tóner, mantenimiento y refacciones incluidos. ¿Le preparo una propuesta sin compromiso?"},
+ {id:"pr_llamada_mail",cat:"prosp",n:"Después de la llamada (correo)",asunto:"Renta de impresoras para {cliente} · Office Automation",t:"Hola {contacto}:\n\nGracias por atender mi llamada. Como le comenté, en Office Automation rentamos impresoras y multifuncionales Kyocera y Konica Minolta para empresas.\n\nLa renta incluye tóner, mantenimiento, refacciones y servicio técnico; usted solo pone el papel. Si un equipo falla y no se repara en la visita, le dejamos uno de respaldo sin costo.\n\nPara prepararle una propuesta solo necesito saber:\n• Cuántos equipos tienen hoy y de qué marca\n• Cuántas impresiones hacen al mes, aproximadamente\n• Si necesitan color, escaneo o tamaño doble carta\n\nQuedo atento.\n\n{firma}\nOffice Automation · WhatsApp {wa} · {web}"},
+ {id:"pr_nocontesto",cat:"prosp",n:"No contestó la llamada",t:"Hola, buen día. Soy {firma} de Office Automation. Intenté comunicarme con el área de compras o administración de {cliente}. Rentamos impresoras con tóner y mantenimiento incluidos. ¿Con quién puedo hablar sobre sus equipos de impresión?"},
+ {id:"pr_frio_mail",cat:"prosp",n:"Primer correo en frío",asunto:"¿Cuánto le cuesta imprimir en {cliente}?",t:"Hola {contacto}:\n\nMuchas empresas pagan por separado el tóner, las refacciones y las visitas técnicas de sus impresoras, y no saben cuánto les cuesta imprimir al mes.\n\nEn Office Automation lo resolvemos con una renta fija que incluye todo eso, con equipos Kyocera y Konica Minolta y servicio el mismo día si reporta por la mañana.\n\n¿Le parece si hacemos una revisión sin costo de sus equipos actuales? Le digo en 15 minutos si le conviene o no.\n\nSaludos,\n{firma}\nOffice Automation · WhatsApp {wa}"},
+ {id:"pr_lead",cat:"prosp",n:"Respuesta a un lead (Facebook / web)",t:"Hola {contacto}, gracias por escribirnos. Para recomendarle la mejor opción, ¿me ayuda con 3 datos?\n1. ¿Busca renta o compra?\n2. ¿Cuántas impresiones hacen al mes, aproximadamente?\n3. ¿Necesita color o solo blanco y negro?\nCon eso le mando opciones hoy mismo."},
+ {id:"pr_referido",cat:"prosp",n:"Contacto por recomendación",t:"Hola {contacto}, soy {firma} de Office Automation. {referente} nos recomendó con usted; le damos servicio de impresión desde hace tiempo. ¿Le puedo llamar 5 minutos para platicarle cómo trabajamos?"},
+ {id:"pr_cita",cat:"prosp",n:"Confirmación de cita",t:"Hola {contacto}, le confirmo nuestra cita el *{fecha}* en {cliente}. Revisaremos sus equipos actuales y cuánto imprimen, sin compromiso. Si le es posible, tenga a la mano una factura reciente de tóner o renta para comparar. ¡Nos vemos!"},
+ {id:"pr_cita_rec",cat:"prosp",n:"Recordatorio de cita (un día antes)",t:"Hola {contacto}, le recuerdo nuestra cita de mañana {fecha}. ¿Seguimos en pie? Si necesita moverla, dígame qué horario le acomoda."},
+ // ---------- Seminuevos y refacciones
+ {id:"sn_disp",cat:"venta",n:"¿Sigue disponible? (Marketplace / ML)",t:"Hola, sí está disponible el {modelo}. Es seminuevo, revisado por nuestros técnicos, con *garantía de 3 meses* y factura.\n¿Para qué uso lo necesita (oficina, negocio, casa) y cuánto imprime al mes? Así le confirmo si es el adecuado."},
+ {id:"sn_detalle",cat:"venta",n:"Detalles del equipo",t:"Le comparto los datos del {modelo}:\n• Precio: {monto}\n• Contador: {contador} páginas\n• Garantía: 3 meses\n• Factura incluida\n• Entrega en Tlalnepantla, Edo. Méx.; envío a otra ciudad por cuenta del cliente\n¿Le mando fotos o un video funcionando?"},
+ {id:"sn_precio",cat:"venta",n:"Cuando piden descuento",t:"Entiendo. El precio ya considera la revisión técnica, las piezas que cambiamos y la garantía de 3 meses con factura, que en un equipo de particular no tiene. ¿Se lo aparto?"},
+ {id:"sn_aparta",cat:"venta",n:"Apartar el equipo",t:"Perfecto. Le aparto el {modelo} hasta el {fecha}. Para la factura, ¿me comparte su constancia de situación fiscal o su RFC, razón social y uso de CFDI? En un momento le paso los datos para el pago."},
+ {id:"sn_entrega",cat:"venta",n:"Entrega o recolección",t:"Hola {contacto}, su {modelo} está listo. Lo puede recoger el {fecha} en Av. de los Reyes 12, Residencial El Dorado, Tlalnepantla (L-V de 9:00 a 18:00). Si prefiere envío, le cotizamos la paquetería."},
+ {id:"sn_post",cat:"venta",n:"Seguimiento después de la venta",t:"Hola {contacto}, ¿cómo le ha funcionado el {modelo}? Recuerde que tiene 3 meses de garantía y que también le surtimos tóner y refacciones. Si quiere, lo podemos incluir en un plan de mantenimiento."},
+ {id:"ref_datos",cat:"venta",n:"Cotizar una refacción",t:"Hola, con gusto le cotizo. Para darle la pieza correcta necesito:\n1. Modelo exacto del equipo\n2. Número de serie (etiqueta trasera)\n3. Foto de la pieza o del código de error en pantalla\nCon eso le confirmo precio y disponibilidad hoy."},
+ {id:"ref_cot",cat:"venta",n:"Precio de refacción",t:"Hola {contacto}, la refacción para su {modelo} queda en {monto} con factura. Disponibilidad: {entrega}. Si quiere, también se la instala uno de nuestros técnicos; le paso el costo de la visita."},
+ // ---------- Cobranza
+ {id:"fac_env",cat:"cobranza",n:"Factura enviada (correo)",asunto:"Factura {folio} · {cliente}",t:"Hola {contacto}:\n\nLe enviamos adjunta la factura {folio} por {monto}, correspondiente a {mes}.\n\nSi necesita que la enviemos a otro correo o requiere algún dato adicional, con gusto la corregimos.\n\nGracias,\n{firma}\nOffice Automation · {correo}"},
+ {id:"pago_rec",cat:"cobranza",n:"Recordatorio amable de pago",t:"Hola {contacto}, le recordamos que la factura {folio} por {monto} vence el {fecha}. Si ya la programó, gracias y omita este mensaje."},
+ {id:"pago_venc",cat:"cobranza",n:"Pago vencido",t:"Hola {contacto}, nuestros registros muestran pendiente la factura {folio} por {monto}, vencida el {fecha}. ¿Me ayuda a confirmar la fecha de pago? Si ya se realizó, por favor compártanos el comprobante para aplicarlo. Gracias."},
+ {id:"pago_ok",cat:"cobranza",n:"Pago recibido",t:"Hola {contacto}, recibimos su pago de la factura {folio}. ¡Muchas gracias! Office Automation."},
+ // ---------- Equipo interno
+ {id:"acceso",cat:"equipo",n:"Acceso a OA 360",t:"Hola {contacto}, ya tienes acceso a OA 360, el sistema de Office Automation:\n{sistema}\nEntra con tu correo y la contraseña temporal que te paso por separado. Al entrar, cámbiala en el enlace «Contraseña» que aparece junto a tu nombre.\nEn el celular, ábrelo en el navegador y elige «Agregar a pantalla de inicio» para tenerlo como app."},
+ {id:"orden_dia",cat:"equipo",n:"Orden del día al técnico",t:"Hola {tecnico}, tu orden de mañana {fecha} ya está en OA 360 (Mi día). Revisa qué llevar antes de salir y avisa por aquí si falta algo. Gracias."},
+ {id:"pasa_lead",cat:"equipo",n:"Pasar un interesado a Lalo",t:"Lalo, te paso un interesado en seminuevos/refacciones: {cliente}, {contacto}. Busca: {modelo}. Ya está registrado en OA 360 (Venta). ¿Le das seguimiento hoy?"}
 ];
 const canW=()=>S.canWrite!==false;
 const can=a=>{const r=S.rol;if(S.owner||r==="admin")return true;
@@ -281,8 +343,27 @@ function renderNav(){
   const mob=S.rol==="tecnico"?["midia","equipos"]:S.rol==="jefe_tecnico"?["midia","servicio","equipos","venta","toner"]:["inicio","servicio","clientes","prospectos","venta","comercial"];
   $("#mnav").innerHTML=vs.filter(v=>mob.includes(v.id)).map(v=>`<a href="#${v.id}" class="${v.id===c?"on":""}">${svg(v.id)}${v.n.split(" ")[0]}</a>`).join("");
 }
+/* ===================== alta inicial de técnicos y vehículos =====================
+   Se aplica sola la primera vez que entra administración, dirección o el jefe técnico.
+   Si ya existen (mismas placas o mismo nombre), no se duplican ni se pisan los cambios hechos en Agenda. */
+const SEED_TEC=[
+ {vid:"veh-lht687a",veh:{nombre:"March gris",placas:"LHT-687-A",marca:"Nissan",modelo:"March",anio:2018,notas:"Color: gris",activo:true},tec:"Jorge Reyes Vázquez",tel:"55 1870 7678"},
+ {vid:"veh-nyf317b",veh:{nombre:"March blanco",placas:"NYF-317-B",marca:"Nissan",modelo:"March",anio:2018,notas:"Color: blanco",activo:true},tec:"Jonathan García Buendía",tel:"55 2716 4184"},
+ {vid:"veh-nex022a",veh:{nombre:"RAM 700 roja",placas:"NEX-022-A",marca:"RAM",modelo:"700",anio:2024,notas:"Color: rojo",activo:true},tec:"Víctor Hugo García Ceras",tel:"55 6559 3158"}];
+let seedHecho=false;
+async function seedTecnicos(){
+  if(seedHecho||!S.ready.tecnicos||!S.ready.vehiculos||!canW()||!(S.owner||["admin","direccion","jefe_tecnico"].includes(S.rol)))return;seedHecho=true;
+  const norm=x=>String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim().replace(/\s+/g," ");
+  const pl=x=>String(x||"").replace(/[^A-Za-z0-9]/g,"").toUpperCase();
+  try{for(const x of SEED_TEC){const v=[...S.vehiculos.values()].find(v=>pl(v.placas)===pl(x.veh.placas));const vid=v?v._id:x.vid;
+    if(!v)await db.doc("vehiculos/"+vid).set(x.veh);
+    const t=[...S.tecs.values()].find(t=>norm(t.nombre)===norm(x.tec));
+    if(!t)await db.doc("tecnicos/tec-"+x.vid.slice(4)).set({nombre:x.tec,tel:x.tel,vehiculoId:vid,activo:true,correo:"",zona:"",especialidad:"",notas:""});
+    else{const ch={};if(!t.tel)ch.tel=x.tel;if(!t.vehiculoId)ch.vehiculoId=vid;if(Object.keys(ch).length)await db.doc("tecnicos/"+t._id).update(ch)}}}
+  catch(e){console.warn("alta inicial de técnicos",e)}}
 function render(){
   if(!S.gateOk){return}
+  seedTecnicos();
   renderNav();
   const c=cur();const fn={inicio:vInicio,midia:vMiDia,servicio:vServicio,preventivos:vPrev,clientes:vClientes,equipos:vEquipos,toner:vToner,comercial:vComercial,cotiz:vCotiz,prospectos:vProspectos,agenda:vAgenda,venta:vVenta,mensajes:vMensajes,config:vConfig}[c];
   const m=$("#main");const st=m.scrollTop;m.innerHTML=fn();m.scrollTop=st;bindView(c);
@@ -420,14 +501,173 @@ function vComercial(){
   return header("Embudo comercial",`${O.filter(o=>!["ganado","perdido"].includes(o.etapa)).length} oportunidades abiertas. Las empresas de Prospectos llegan aquí solas al pasar a cita o propuesta.`,`${canW()?`<button class="btn pri" data-a="nuevaOpp">+ Nueva oportunidad</button>`:""}<a class="btn" href="#prospectos">Ir a Prospectos</a>`)+
   `<div class="board" data-board="opp">${ETAPAS.map(([k,n])=>{const it=O.filter(o=>o.etapa===k);const v=it.reduce((s,o)=>s+(+o.valor||0),0);return `<div class="col" data-col="${k}"><h3>${n}<span>${it.length}${v?" · "+money(v):""}</span></h3>${it.map(o=>`<div class="card" draggable="true" data-opp="${esc(o._id)}"><div class="t">${esc(o.empresa)}</div><div class="muted sm">${esc(o.tipo||"")}${o.equipos?" · "+esc(o.equipos)+" equipos":""}</div>${o.valor?`<div class="b">${money(o.valor)}/mes</div>`:""}${o.prox?`<div class="sm ${o.prox<Date.now()?"":"muted"}" style="${o.prox<Date.now()?"color:var(--bad)":""}">Seguimiento ${fd(o.prox)}</div>`:""}</div>`).join("")}</div>`}).join("")}</div>`;
 }
+/* ===================== contrato de arrendamiento (Word) ===================== */
+const NUM_LETRA=n=>{n=+n;const u=["CERO","UN","DOS","TRES","CUATRO","CINCO","SEIS","SIETE","OCHO","NUEVE","DIEZ","ONCE","DOCE","TRECE","CATORCE","QUINCE","DIECISÉIS","DIECISIETE","DIECIOCHO","DIECINUEVE","VEINTE","VEINTIÚN","VEINTIDÓS","VEINTITRÉS","VEINTICUATRO","VEINTICINCO","VEINTISÉIS","VEINTISIETE","VEINTIOCHO","VEINTINUEVE"];
+  if(n<30)return u[n];const d=["","","","TREINTA","CUARENTA","CINCUENTA","SESENTA","SETENTA","OCHENTA","NOVENTA"][Math.floor(n/10)];return n%10?d+" Y "+u[n%10]:d};
+const ESQ_TXT={"Renta + impresiones del mes":"RENTA MÁS CONSUMO","Renta con volumen incluido":"RENTA CON VOLUMEN INCLUIDO","Solo precio por impresión":"PRECIO POR IMPRESIÓN"};
+const TRATOS=["EL SR.","LA SRA.","EL LIC.","LA LIC.","EL ING.","LA ING.","EL C.","LA C.","EL C.P.","LA C.P."];
+const sinArt=t=>String(t||"").replace(/^(EL|LA)\s+/,"");
+const SOFT_DEF=m=>/kyocera/i.test(m)?"SOFTWARE DENOMINADO KFS (KYOCERA FLEET SERVICE)":/konica/i.test(m)?"SOFTWARE DE MONITOREO REMOTO DEL FABRICANTE":"SOFTWARE DE MONITOREO REMOTO";
+const LEG_CAMPOS=[["tipo","Tipo de persona"],["razon","Razón social o nombre (como en el acta)"],["rfc","RFC"],["repTrato","Trato del representante"],["repNombre","Nombre del representante legal"],["escritura","Escritura pública N.º"],["escFecha","Fecha de la escritura (ej. 17 DE MAYO DE 2016)"],["notario","Notario (ej. EL LIC. VÍCTOR MANUEL MARTÍNEZ MORALES)"],["notaria","Notaría pública N.º"],["escEstado","Estado de la notaría"],["folioMerc","Folio mercantil"],["ident","Identificación (persona física, ej. INE 1234567890)"],["domFiscal","Domicilio fiscal completo"]];
+function eqsCliente(id){return [...S.equipos.values()].filter(e=>e.clienteId===id&&e.estatus!=="retirado"&&e.estatus!=="venta")}
+function abrirContrato(id){const c=S.clientes.get(id);if(!c)return;const E=EMP();const L0=c.legal||{};const k=c.contrato||{};
+  const lg={tipo:"moral",razon:c.nombre||"",rfc:c.rfc||"",repTrato:"EL SR.",...L0};
+  const eqs=eqsCliente(id);const marcas=[...new Set(eqs.map(e=>(e.marca||"").toUpperCase()).filter(Boolean))];const cg=c.contratoGen||{};
+  const falta=[["repNombre","nombre del representante legal"],["escritura","número de escritura constitutiva"],["notario","notario de la escritura"]].filter(([x])=>!E[x]).map(x=>x[1]);
+  const inp=(k2,v,extra="")=>`<input class="f" data-lg="${k2}" value="${esc(v||"")}" ${extra}>`;
+  drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>Contrato de arrendamiento</h2><p class="muted" style="margin-top:0">${esc(c.nombre)} · Se descarga en Word con tu formato, listo para revisar e imprimir. Lo que dejes vacío sale como ______ para llenarlo a mano.</p>
+  ${falta.length?`<div class="panel" style="border-color:var(--warn,#C98A00);margin-bottom:12px"><b>Faltan datos de Office Automation:</b> ${esc(falta.join(", "))}. ${S.rol==="admin"||S.owner?`Llénalos en <a href="#config" data-close>Equipo y accesos → Datos de la empresa</a>.`:"Pídeselos a Toni o a Bernardo."}</div>`:""}
+  <div class="panel"><h2>1. Datos legales del cliente</h2><div class="form">
+   <label class="fl">Tipo de persona<select class="f" data-lg="tipo"><option value="moral" ${lg.tipo!=="fisica"?"selected":""}>Persona moral (empresa)</option><option value="fisica" ${lg.tipo==="fisica"?"selected":""}>Persona física</option></select></label>
+   <label class="fl">Razón social o nombre${inp("razon",lg.razon)}</label>
+   <label class="fl">RFC${inp("rfc",lg.rfc)}</label>
+   <label class="fl">Trato del representante<select class="f" data-lg="repTrato">${TRATOS.map(t=>`<option ${lg.repTrato===t?"selected":""}>${t}</option>`).join("")}</select></label>
+   <label class="fl">Nombre del representante legal${inp("repNombre",lg.repNombre)}</label>
+   <label class="fl full">Domicilio fiscal completo${inp("domFiscal",lg.domFiscal,'placeholder="Calle, número, colonia, municipio, estado, C.P."')}</label>
+   <div class="full moral" ${lg.tipo==="fisica"?"hidden":""}><div class="form">
+    <label class="fl">Escritura pública N.º${inp("escritura",lg.escritura)}</label><label class="fl">Fecha de la escritura${inp("escFecha",lg.escFecha,'placeholder="17 DE MAYO DE 2016"')}</label>
+    <label class="fl">Notario${inp("notario",lg.notario,'placeholder="EL LIC. NOMBRE APELLIDOS"')}</label><label class="fl">Notaría pública N.º${inp("notaria",lg.notaria)}</label>
+    <label class="fl">Estado de la notaría${inp("escEstado",lg.escEstado,'placeholder="ESTADO DE MÉXICO"')}</label><label class="fl">Folio mercantil${inp("folioMerc",lg.folioMerc)}</label></div></div>
+   <label class="fl full fisica" ${lg.tipo==="fisica"?"":"hidden"}>Identificación oficial${inp("ident",lg.ident,'placeholder="CREDENCIAL PARA VOTAR N.º ..."')}</label>
+  </div><p class="muted sm">Todo esto viene del acta constitutiva y la constancia de situación fiscal que ya marcaste en Documentos.</p></div>
+  <div class="panel" style="margin-top:12px"><h2>2. Condiciones (Anexo A)</h2><div class="form">
+   <label class="fl">Esquema<select class="f" data-cg="esquema">${Object.keys(ESQ_TXT).map(x=>`<option ${(cg.esquema||k.esquema)===x?"selected":""}>${x}</option>`).join("")}</select></label>
+   <label class="fl">Renta mensual (+ IVA)<input class="f" type="number" step="0.01" data-cg="renta" value="${esc(cg.renta??k.renta??"")}"></label>
+   <label class="fl">Precio página B/N (+ IVA)<input class="f" type="number" step="0.01" data-cg="bn" value="${esc(cg.bn??k.bn??"")}"></label>
+   <label class="fl">Precio página color (+ IVA)<input class="f" type="number" step="0.01" data-cg="color" value="${esc(cg.color??k.color??"")}"></label>
+   <label class="fl">Plazo forzoso<select class="f" data-cg="plazo">${["12","24","36","48","60"].map(x=>`<option value="${x}" ${String(cg.plazo||k.plazo||"36")===x?"selected":""}>${x} meses</option>`).join("")}</select></label>
+   <label class="fl">Marca de los equipos<input class="f" data-cg="marca" value="${esc(cg.marca||marcas.join(" / ")||"KYOCERA")}"></label>
+   <label class="fl">Horario de servicio: de<input class="f" data-cg="horaIni" value="${esc(cg.horaIni||"9:00")}"></label><label class="fl">a<input class="f" data-cg="horaFin" value="${esc(cg.horaFin||"18:00")}"></label>
+   <label class="fl full">Cómo se toman las lecturas (cláusula 12)<input class="f" data-cg="software" value="${esc(cg.software||SOFT_DEF(marcas.join(" ")||"KYOCERA"))}"></label>
+   <label class="fl">Fecha de firma<input class="f" type="date" data-cg="firma" value="${esc(cg.firma||"")}"><span class="muted sm" style="font-weight:400">Vacía = se llena a mano.</span></label>
+  </div></div>
+  <div class="panel" style="margin-top:12px"><h2>3. Equipos del contrato</h2>${eqs.length?eqs.map(e=>{const g=(cg.eqs||{})[e._id]||{};const on=cg.eqs?!!g.on:true;return `<div style="border-top:1px solid var(--line);padding:8px 0"><label class="row" style="flex-wrap:nowrap"><input type="checkbox" data-ceq="${esc(e._id)}" ${on?"checked":""}><b>${esc(e.modelo||"")}</b> <span class="muted sm">serie ${esc(e.serie||e._id)}</span></label>
+   <div class="form" style="margin-top:6px"><label class="fl">Accesorios<input class="f" data-ceqa="${esc(e._id)}" value="${esc(g.acc??"")}" placeholder="Stand, RADF… o N/A"></label><label class="fl">Lectura inicial<input class="f" inputmode="numeric" data-ceql="${esc(e._id)}" value="${esc(g.lect??"")}"></label><label class="fl full">Domicilio de instalación<input class="f" data-ceqd="${esc(e._id)}" value="${esc(g.dom??[lg.domFiscal,e.ubicacion].filter(Boolean).join(" · "))}"></label></div></div>`}).join(""):`<p class="muted sm" style="margin:0">Este cliente no tiene equipos dados de alta. Agrégalos en Equipos (aunque no estén instalados) para que salgan en el Anexo A; si no, la tabla sale con una fila en blanco.</p>`}</div>
+  <div class="row" style="margin-top:14px"><button class="btn pri" data-a="genContrato" data-id="${esc(id)}">Descargar contrato (Word)</button><button class="btn" data-a="saveContratoGen" data-id="${esc(id)}">Solo guardar datos</button></div>
+  <p class="muted sm">Las cláusulas son las de tu contrato modelo. Si el abogado cambia alguna, se cambia una vez en la plantilla y aplica a todos.</p>`,L=>{
+    const t=L.querySelector('[data-lg="tipo"]');t.onchange=()=>{L.querySelector(".moral").hidden=t.value==="fisica";L.querySelector(".fisica").hidden=t.value!=="fisica"};
+    const mk=L.querySelector('[data-cg="marca"]'),sw=L.querySelector('[data-cg="software"]');mk.onchange=()=>{if(!cg.software)sw.value=SOFT_DEF(mk.value)};bindCommon(L)})}
+function leerContratoForm(L){const lg={},cg={eqs:{}};L.querySelectorAll("[data-lg]").forEach(el=>lg[el.dataset.lg]=el.value.trim());
+  L.querySelectorAll("[data-cg]").forEach(el=>cg[el.dataset.cg]=el.type==="number"?(el.value===""?"":+el.value):el.value.trim());
+  L.querySelectorAll("[data-ceq]").forEach(el=>{const i=el.dataset.ceq;const q=s=>L.querySelector(`[${s}="${CSS.escape(i)}"]`).value.trim();cg.eqs[i]={on:el.checked,acc:q("data-ceqa"),lect:q("data-ceql"),dom:q("data-ceqd")}});return{lg,cg}}
+const xmlEsc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const RAYA="______________";
+function datosContrato(c,lg,cg){const E=EMP();const up=s=>String(s||"").toUpperCase();const v=s=>s?up(s):RAYA;
+  const MES=["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
+  const f=cg.firma?cg.firma.split("-"):null;const pz=+cg.plazo||36;
+  const declA=lg.tipo==="fisica"?`QUE ES UNA PERSONA FÍSICA CON ACTIVIDAD EMPRESARIAL, CON REGISTRO FEDERAL DE CONTRIBUYENTES ${v(lg.rfc)}, QUIEN SE IDENTIFICA CON ${v(lg.ident)}.`
+   :`QUE ES UNA SOCIEDAD LEGALMENTE CONSTITUIDA Y EXISTENTE CONFORME A LAS LEYES DE LA REPUBLICA MEXICANA, SEGÚN CONSTA EN LA ESCRITURA PÚBLICA NO. ${v(lg.escritura)} DE FECHA ${v(lg.escFecha)}, OTORGADA ANTE ${v(lg.notario)}, TITULAR DE LA NOTARIA PUBLICA NO. ${v(lg.notaria)} DEL ${v(lg.escEstado)}, CUYO PRIMER TESTIMONIO QUEDO INSCRITO EN EL REGISTRO PÚBLICO DE LA PROPIEDAD Y EL COMERCIO BAJO EL FOLIO MERCANTIL No. ${v(lg.folioMerc)}.`;
+  const repE=E.repNombre?up((E.repTrato||"")+" "+E.repNombre).trim():RAYA,repC=lg.repNombre?up(lg.repTrato+" "+lg.repNombre):RAYA;
+  const precio=n=>n===""||n==null?RAYA:"$ "+(+n).toLocaleString("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const eqs=Object.entries(cg.eqs||{}).filter(([,g])=>g.on).map(([i,g])=>{const e=S.equipos.get(i)||{};return{eq_modelo:up(e.modelo)||RAYA,eq_acc:g.acc?up(g.acc):"N/A",eq_serie:(e.serie||i)+(g.lect?" (LECT. INICIAL "+(+String(g.lect).replace(/\D/g,"")).toLocaleString("es-MX")+")":""),eq_dom:g.dom||RAYA}});
+  return{d:{emp_razon:up(E.nombre),emp_rep:repE,emp_rep_firma:sinArt(repE),emp_escritura:v(E.escritura),emp_notario:v(E.notario),emp_domicilio:up(E.dirFiscal||E.dir),
+   cli_razon:v(lg.razon),cli_rep:repC,cli_rep_firma:sinArt(repC),cli_decl_a:declA,cli_domicilio:v(lg.domFiscal),
+   marca:v(cg.marca),hora_ini:cg.horaIni||"9:00",hora_fin:cg.horaFin||"18:00",software:v(cg.software),plazo:String(pz),plazo_letra:NUM_LETRA(pz).replace(/ÚN$/,"UNO").replace(/^UN$/,"UNO"),
+   dia:f?String(+f[2]):"____",mes:f?MES[+f[1]-1]:"__________",anio:f?f[0]:"______",renta:precio(cg.renta),clic_bn:precio(cg.bn),clic_color:precio(cg.color),esquema:ESQ_TXT[cg.esquema]||"RENTA MÁS CONSUMO"},
+   eqs:eqs.length?eqs:[{eq_modelo:"",eq_acc:"",eq_serie:"",eq_dom:""}]}}
+function llenarXml(xml,d,eqs){const r=(s,o)=>s.replace(/«(\w+)»/g,(m,k)=>k in o?xmlEsc(o[k]):m);
+  const i=xml.indexOf("«eq_modelo»");if(i>=0){const a=Math.max(xml.lastIndexOf("<w:tr ",i),xml.lastIndexOf("<w:tr>",i));const b=xml.indexOf("</w:tr>",i)+7;const fila=xml.slice(a,b);xml=xml.slice(0,a)+eqs.map(e=>r(fila,e)).join("")+xml.slice(b)}
+  return r(xml,d)}
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=u=>{let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=CRC_T[(c^u[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0};
+function zipStore(files){const te=new TextEncoder();const parts=[],cen=[];let off=0;
+  for(const [name,txt] of files){const nb=te.encode(name),db=te.encode(txt),crc=crc32(db);
+    const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint32(14,crc,true);h.setUint32(18,db.length,true);h.setUint32(22,db.length,true);h.setUint16(26,nb.length,true);
+    parts.push(new Uint8Array(h.buffer),nb,db);
+    const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint32(16,crc,true);c.setUint32(20,db.length,true);c.setUint32(24,db.length,true);c.setUint16(28,nb.length,true);c.setUint32(42,off,true);
+    cen.push(new Uint8Array(c.buffer),nb);off+=30+nb.length+db.length}
+  const cs=cen.reduce((s,x)=>s+x.length,0);const e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"})}
+function contratoDocx(c,lg,cg){const T=window.OA_CONTRATO;if(!T)throw new Error("Falta contrato.js");const {d,eqs}=datosContrato(c,lg,cg);
+  const names=Object.keys(T).sort((a,b)=>(a==="[Content_Types].xml"?-1:b==="[Content_Types].xml"?1:0));
+  return zipStore(names.map(n=>[n,n==="word/document.xml"?llenarXml(T[n],d,eqs):T[n]]))}
+function bajar(blob,name){const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}
+const cargarContrato=()=>window.OA_CONTRATO?Promise.resolve():new Promise((ok,ko)=>{const s=document.createElement("script");s.src="contrato.js?v=19";s.onload=ok;s.onerror=()=>ko(new Error("plantilla"));document.head.appendChild(s)});
+/* ===================== mensajes y encuestas ===================== */
+const MS={tab:"servicio",v:{}};
+const MS_LBL={tel:"WhatsApp del cliente",contacto:"Nombre del contacto",cliente:"Empresa",folio:"Folio",modelo:"Modelo / equipo",serie:"Serie",tecnico:"Técnico",compromiso:"Compromiso",fecha:"Fecha y hora",monto:"Monto",mes:"Mes",documento:"Documento que falta",liga:"Liga de reseñas de Google",referente:"Quién nos recomendó",contador:"Contador (páginas)",entrega:"Disponibilidad",encuesta:"Liga de la encuesta"};
+const baseUrl=()=>location.origin+location.pathname.replace(/[^/]*$/,"");
+const encuestaUrl=t=>baseUrl()+"encuesta.html?t="+encodeURIComponent(t._id||"")+"&f="+encodeURIComponent(t.folio||"")+"&n="+encodeURIComponent(t.tecnicoId?nombreDe(t.tecnicoId).split(" ")[0]:"");
+const MS_FIJOS=()=>({wa:EMPRESA.waTxt,correo:EMPRESA.correo,web:EMPRESA.web,portal:baseUrl()+"reportar.html",sistema:baseUrl(),firma:S.me?.name||""});
+const tplKeys=p=>[...new Set([...((p.asunto||"")+" "+p.t).matchAll(/\{(\w+)\}/g)].map(m=>m[1]))];
+const msFill=s=>{const F=MS_FIJOS();return s.replace(/\{(\w+)\}/g,(m,k)=>F[k]||MS.v[k]||m)};
+const msHtml=s=>esc(msFill(s)).replace(/\{(\w+)\}/g,'<mark class="ph">{$1}</mark>');
+const waHref=txt=>MS.v.tel?waLink(MS.v.tel,txt):"https://wa.me/?text="+encodeURIComponent(txt);
+async function copiar(txt){
+  try{await navigator.clipboard.writeText(txt);toast("Copiado. Ya lo puedes pegar.")}
+  catch(e){const ta=document.createElement("textarea");ta.value=txt;ta.setAttribute("readonly","");ta.style.cssText="position:fixed;top:0;left:0;opacity:0";document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand("copy")}catch(_){}ta.remove();toast(ok?"Copiado. Ya lo puedes pegar.":"No se pudo copiar: selecciona el texto y cópialo a mano.")}
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-copy]");if(b){e.preventDefault();copiar(b.dataset.copy)}});
 function vMensajes(){
-  return header("Mensajes","Plantillas para WhatsApp. Desde cada ticket o cliente se rellenan solas con los datos y se abren en WhatsApp.")+
-  `<div class="grid g11">${PLANTILLAS.map(p=>`<div class="panel"><h2>${esc(p.n)}</h2><p class="sm" style="margin:0">${esc(p.t)}</p></div>`).join("")}</div>`;
+  const al=encAlertas().length;
+  return header("Mensajes","Toca «Copiar» y pégalo en WhatsApp o en el correo. Los datos que escribas arriba se ponen solos en todos los mensajes; lo marcado en amarillo falta por llenar.")+
+  `<div class="tabs">${MSG_CATS.map(([k,n])=>`<button class="${MS.tab===k?"on":""}" data-mtab="${k}">${n}${k==="encuestas"&&al?` <span class="chip bad">${al}</span>`:""}</button>`).join("")}</div>`+(MS.tab==="encuestas"?vEncuestas():vMsgCat());
+}
+function vMsgCat(){
+  const L=PLANTILLAS.filter(p=>p.cat===MS.tab);const F=MS_FIJOS();
+  const keys=["tel",...new Set(L.flatMap(tplKeys))].filter(k=>!(k in F)&&k!=="encuesta");
+  const opts=[...[...S.tickets.values()].sort((a,b)=>(b.creado||0)-(a.creado||0)).slice(0,300).map(t=>`<option value="${esc(t.folio)}">${esc(t.cliente||"")}</option>`),
+   ...[...S.cot.values()].map(q=>`<option value="${esc(q.folio||"")}">${esc(q.empresa||"")}</option>`),
+   ...[...S.clientes.values()].map(c=>`<option value="${esc(c.nombre||"")}"></option>`)].join("");
+  return `<div class="panel" style="margin-bottom:14px"><div class="form">
+   <label class="fl full">Rellenar con un ticket, cotización o cliente<input class="f" id="ms_de" list="ms_dl" placeholder="Escribe un folio (OASA-0001, COT-0001) o el nombre del cliente" autocomplete="off"><datalist id="ms_dl">${opts}</datalist></label>
+   ${keys.map(k=>`<label class="fl">${esc(MS_LBL[k]||k)}<input class="f" data-msv="${k}" value="${esc(MS.v[k]||"")}" ${k==="tel"?'inputmode="tel" placeholder="Opcional"':""}></label>`).join("")}
+  </div><div class="row" style="margin-top:10px"><button class="btn sm" data-a="msLimpiar">Borrar datos</button><span class="muted sm">Tu nombre (${esc(F.firma)}), el WhatsApp y el correo de la empresa ya van puestos.</span></div></div>
+  <div class="grid g11">${L.map(p=>{const mail=!!p.asunto;return `<div class="panel msg"><div class="row" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start"><h2 style="margin:0">${esc(p.n)}</h2><span class="chip ${mail?"blue":"ok"}">${mail?"Correo":"WhatsApp"}</span></div>
+   ${mail?`<div class="muted sm b" style="margin-top:10px">Asunto</div><div class="mst" data-mt="${p.id}|a">${msHtml(p.asunto)}</div><div class="muted sm b">Mensaje</div>`:""}
+   <div class="mst" data-mt="${p.id}|t">${msHtml(p.t)}</div>
+   <div class="row"><button class="btn sm pri" data-mcopy="${p.id}|t">${mail?"Copiar mensaje":"Copiar"}</button>${mail?`<button class="btn sm" data-mcopy="${p.id}|a">Copiar asunto</button>`:`<a class="btn sm wa" data-mwa="${p.id}" target="_blank" rel="noopener" href="${esc(waHref(msFill(p.t)))}">Abrir en WhatsApp</a>`}</div></div>`}).join("")}</div>`;
+}
+function msDesde(q){q=q.trim();if(!q)return false;const up=q.toUpperCase();
+  const t=[...S.tickets.values()].find(x=>(x.folio||"").toUpperCase()===up);
+  if(t){const c=S.clientes.get(t.clienteId)||{};const k=(c.contactos||[])[0]||{};Object.assign(MS.v,{fecha:t.prog?sdate(t.prog)+(t.hora?" a las "+t.hora:""):"",contacto:t.reportadoPor||k.nombre||"",cliente:t.cliente||c.nombre||"",folio:t.folio,modelo:t.modelo||"",serie:t.serie||"",tecnico:t.tecnicoId?nombreDe(t.tecnicoId):"",compromiso:t.compromiso?fdt(t.compromiso):"",tel:t.telefono&&/\d{8}/.test(String(t.telefono).replace(/\D/g,""))?t.telefono:(k.tel||""),encuesta:encuestaUrl(t)});return true}
+  const c0=[...S.cot.values()].find(x=>(x.folio||"").toUpperCase()===up);
+  if(c0){Object.assign(MS.v,{folio:c0.folio,cliente:c0.empresa||"",contacto:c0.atencion||"",modelo:c0.modelo||"",monto:money(cotTotal(c0))});return true}
+  const c=[...S.clientes.values()].find(x=>(x.nombre||"").toUpperCase()===up);
+  if(c){const k=(c.contactos||[])[0]||{};Object.assign(MS.v,{cliente:c.nombre,contacto:k.nombre||"",tel:k.tel||""});return true}
+  return false}
+function bindMensajes(m){
+  m.querySelectorAll("[data-mtab]").forEach(b=>b.onclick=()=>{MS.tab=b.dataset.mtab;render()});
+  const refresh=()=>{m.querySelectorAll("[data-mt]").forEach(el=>{const [id,w]=el.dataset.mt.split("|");const p=PLANTILLAS.find(x=>x.id===id);el.innerHTML=msHtml(w==="a"?p.asunto:p.t)});
+    m.querySelectorAll("[data-mwa]").forEach(a=>{const p=PLANTILLAS.find(x=>x.id===a.dataset.mwa);a.href=waHref(msFill(p.t))})};
+  m.querySelectorAll("[data-msv]").forEach(i=>i.oninput=()=>{MS.v[i.dataset.msv]=i.value.trim();refresh()});
+  const de=m.querySelector("#ms_de");if(de)de.onchange=()=>{if(msDesde(de.value)){render();toast("Datos rellenados")}else toast("No encontré ese folio o cliente")};
+  m.querySelectorAll("[data-mcopy]").forEach(b=>b.onclick=()=>{const [id,w]=b.dataset.mcopy.split("|");const p=PLANTILLAS.find(x=>x.id===id);const txt=msFill(w==="a"?p.asunto:p.t);
+    copiar(p.asunto&&w==="t"?txt.replace(/\*([^*\n]+)\*/g,"$1"):txt);
+    if(/\{\w+\}/.test(txt))setTimeout(()=>toast("Copiado. Ojo: quedan datos entre llaves por llenar."),50)});
+  m.querySelectorAll("[data-encok]").forEach(b=>b.onclick=()=>{const t=S.tickets.get(b.dataset.encok);if(t)upd("tickets/"+t._id,{encuesta:{...t.encuesta,atendida:Date.now(),atendidaPor:S.me.id}},"Marcada como atendida")});
+}
+/* ----- encuestas ----- */
+const ENC_OPC={puntual:{a_tiempo:"A tiempo",poco:"Poco retraso",tarde:"Muy tarde",sin_hora:"Sin hora acordada"},resuelto:{si:"Sí",parcial:"En parte",no:"No"},rapidez:{rapido:"Rápido",normal:"Lo esperado",lento:"Tardó demasiado"},si_no:{si:"Sí",no:"No"}};
+const encMala=e=>!!(e.llamar||e.resuelto!=="si"||(e.nps!=null&&e.nps<=6)||e.trato<=3||e.presentacion<=3||e.atencion<=3||e.puntual==="tarde"||e.rapidez==="lento"||e.explico==="no"||e.limpio==="no");
+const encAlertas=()=>[...S.tickets.values()].filter(t=>t.encuesta&&!t.encuesta.atendida&&encMala(t.encuesta));
+const prom=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
+function encStats(L){const E=L.map(t=>t.encuesta);const n=E.length;if(!n)return null;const nps=E.filter(e=>e.nps!=null);
+  const pct=f=>Math.round(100*E.filter(f).length/n);
+  return{n,trato:prom(E.map(e=>e.trato).filter(Boolean)),pres:prom(E.map(e=>e.presentacion).filter(Boolean)),aten:prom(E.map(e=>e.atencion).filter(Boolean)),
+   punt:pct(e=>e.puntual==="a_tiempo"||e.puntual==="sin_hora"),expl:pct(e=>e.explico==="si"&&e.limpio==="si"),res:pct(e=>e.resuelto==="si"),
+   nps:nps.length?Math.round(100*(nps.filter(e=>e.nps>=9).length-nps.filter(e=>e.nps<=6).length)/nps.length):null}}
+const n1=v=>v==null?"—":v.toFixed(1);
+function encResumen(t){const e=t.encuesta;return `<div class="sm">Llegó: <b>${esc(ENC_OPC.puntual[e.puntual]||"—")}</b> · Trato <b>${e.trato||"—"}/5</b> · Presentación <b>${e.presentacion||"—"}/5</b> · Explicó: <b>${esc(ENC_OPC.si_no[e.explico]||"—")}</b> · Área limpia: <b>${esc(ENC_OPC.si_no[e.limpio]||"—")}</b> · Resuelto: <b>${esc(ENC_OPC.resuelto[e.resuelto]||"—")}</b> · Tiempo: <b>${esc(ENC_OPC.rapidez[e.rapidez]||"—")}</b> · Atención al reportar <b>${e.atencion||"—"}/5</b> · Recomendaría <b>${e.nps??"—"}/10</b></div>${e.comentario?`<div class="sm" style="margin-top:4px">«${esc(e.comentario)}»</div>`:""}${e.llamar?`<div class="sm b" style="color:var(--bad);margin-top:4px">Pidió que le llamen${e.nombre?" · "+esc(e.nombre):""}${e.tel?" · "+esc(e.tel):""}</div>`:e.nombre?`<div class="muted sm">${esc(e.nombre)}</div>`:""}`}
+function vEncuestas(){
+  const T=[...S.tickets.values()];const desde=Date.now()-90*864e5;
+  const R=T.filter(t=>t.encuesta&&(t.encuesta.t||0)>=desde).sort((a,b)=>(b.encuesta.t||0)-(a.encuesta.t||0));
+  const st=encStats(R);const al=encAlertas();
+  const sin=T.filter(t=>t.estado==="cerrado"&&!t.encuesta&&(t.fin||0)>=Date.now()-15*864e5).sort((a,b)=>(b.fin||0)-(a.fin||0));
+  const porTec={};R.forEach(t=>{(porTec[t.tecnicoId||""]=porTec[t.tecnicoId||""]||[]).push(t)});
+  const kp=(v,l)=>`<div class="panel"><div class="muted sm">${l}</div><div style="font-size:26px;font-weight:800">${v}</div></div>`;
+  const pRec=PLANTILLAS.find(x=>x.id==="encuesta_rec"),pCer=PLANTILLAS.find(x=>x.id==="cerrado");
+  return `<p class="muted sm" style="margin-top:0">Al cerrar un servicio, manda el mensaje «Servicio cerrado + encuesta» desde el ticket: lleva la liga para que el cliente califique la visita en 1 minuto. Las respuestas llegan aquí y al ticket.</p>`+
+  (st?`<div class="grid g4" style="margin-bottom:14px">${kp(st.n,"Respuestas (90 días)")}${kp(n1(st.trato)+"<small style='font-size:14px'>/5</small>","Trato del técnico")}${kp(st.punt+"%","Llegaron a tiempo")}${kp(st.res+"%","Problema resuelto")}${kp(n1(st.pres)+"<small style='font-size:14px'>/5</small>","Presentación")}${kp(n1(st.aten)+"<small style='font-size:14px'>/5</small>","Atención al reportar")}${kp(st.nps??"—","NPS (recomendación)")}${kp(st.expl+"%","Explicó y dejó limpio")}</div>`:`<div class="panel" style="margin-bottom:14px"><b>Aún no hay respuestas.</b> <span class="muted">Cuando un cliente conteste, verás aquí los promedios por técnico.</span></div>`)+
+  `<div class="panel" style="margin-bottom:14px"><h2>Requieren atención ${al.length?`<span class="chip bad">${al.length}</span>`:""}</h2>${al.length?al.map(t=>`<div style="border-top:1px solid var(--line);padding:10px 0"><div class="row" style="justify-content:space-between"><div><b>${esc(t.folio)}</b> · ${esc(t.cliente||"")} · <span class="muted">${esc(t.tecnicoId?nombreDe(t.tecnicoId):"Sin técnico")} · ${fd(t.encuesta.t)}</span></div><div class="row"><button class="btn sm" data-tk="${esc(t._id)}">Ver ticket</button>${canW()?`<button class="btn sm pri" data-encok="${esc(t._id)}">Ya lo atendí</button>`:""}</div></div>${encResumen(t)}</div>`).join(""):`<p class="muted sm" style="margin:0">Nada pendiente. Aquí aparecen las respuestas con queja, calificación baja, problema sin resolver o petición de llamada.</p>`}</div>`+
+  (st?`<div class="panel" style="margin-bottom:14px;overflow-x:auto"><h2>Por técnico</h2><table class="tbl"><thead><tr><th>Técnico</th><th>Respuestas</th><th>Trato</th><th>Presentación</th><th>A tiempo</th><th>Resuelto</th><th>NPS</th></tr></thead><tbody>${Object.entries(porTec).map(([id,L])=>{const s=encStats(L);return `<tr><td>${esc(id?nombreDe(id):"Sin técnico")}</td><td>${s.n}</td><td>${n1(s.trato)}</td><td>${n1(s.pres)}</td><td>${s.punt}%</td><td>${s.res}%</td><td>${s.nps??"—"}</td></tr>`}).join("")}</tbody></table></div>`:"")+
+  `<div class="panel" style="margin-bottom:14px"><h2>Cerrados sin encuesta (15 días)</h2>${sin.length?sin.slice(0,40).map(t=>{const c=S.clientes.get(t.clienteId)||{};const tel=t.telefono||(c.contactos||[])[0]?.tel||"";const txt=fillTpl(pRec,t);return `<div class="row" style="justify-content:space-between;border-top:1px solid var(--line);padding:8px 0"><div><b>${esc(t.folio)}</b> · ${esc(t.cliente||"")} <span class="muted sm">· cerrado ${fd(t.fin)}</span></div><div class="row"><button class="btn sm" data-copy="${esc(fillTpl(pCer,t))}">Copiar cierre + encuesta</button><button class="btn sm" data-copy="${esc(txt)}">Copiar recordatorio</button>${tel?`<a class="btn sm wa" target="_blank" rel="noopener" href="${esc(waLink(tel,txt))}">WhatsApp</a>`:""}</div></div>`}).join(""):`<p class="muted sm" style="margin:0">Todos los servicios cerrados recientes ya tienen encuesta.</p>`}</div>`+
+  (R.length?`<div class="panel"><h2>Respuestas recientes</h2>${R.slice(0,30).map(t=>`<div style="border-top:1px solid var(--line);padding:10px 0"><div><b>${esc(t.folio)}</b> · ${esc(t.cliente||"")} · <span class="muted">${esc(t.tecnicoId?nombreDe(t.tecnicoId):"")} · ${fd(t.encuesta.t)}</span> ${encMala(t.encuesta)?(t.encuesta.atendida?'<span class="chip">Atendida</span>':'<span class="chip bad">Revisar</span>'):'<span class="chip ok">Bien</span>'}</div>${encResumen(t)}</div>`).join("")}</div>`:"");
 }
 function vConfig(){
   const U=Object.entries(S.usuarios);
   return header("Equipo y accesos","Cada persona entra con su correo; aquí le asignas su rol y el nombre que verá el equipo.")+
-  `<div class="panel" style="margin-bottom:16px"><h2>Agregar persona</h2><p class="muted sm" style="margin-top:0">Primero invítala en Supabase (Authentication → Users → Invite) con su correo; luego dale aquí su rol.</p><div class="row"><input class="f" id="usrid" type="email" placeholder="correo@officeautomation.com.mx" style="flex:1;min-width:220px"><input class="f" id="usrn" placeholder="Nombre que verá el equipo" style="flex:1;min-width:180px"><select class="f" id="usrr">${Object.entries(ROLES).map(([k,n])=>`<option value="${k}">${n}</option>`).join("")}</select><button class="btn pri" data-a="addId">Agregar</button></div></div>
+  `<div class="panel" style="margin-bottom:16px"><h2>Agregar persona</h2><p class="muted sm" style="margin-top:0">Primero créala en Supabase (Authentication → Users → Add user → Create new user) con su correo y una contraseña temporal, marcando «Auto Confirm User»; luego dale aquí su rol. Mándale sus datos con el mensaje «Acceso a OA 360» (Mensajes → Equipo).</p><div class="row"><input class="f" id="usrid" type="email" placeholder="correo@officeautomation.com.mx" style="flex:1;min-width:220px"><input class="f" id="usrn" placeholder="Nombre que verá el equipo" style="flex:1;min-width:180px"><select class="f" id="usrr">${Object.entries(ROLES).map(([k,n])=>`<option value="${k}">${n}</option>`).join("")}</select><button class="btn pri" data-a="addId">Agregar</button></div></div>
   <div class="panel wrap"><table class="tbl"><tr><th>Correo</th><th>Nombre en el sistema</th><th>Rol</th><th></th></tr>${U.map(([id,u])=>`<tr><td class="sm">${esc(id)}</td><td><input class="f" value="${esc(u.alias||"")}" data-ualias="${esc(id)}"></td><td><select class="f" data-urol="${esc(id)}">${Object.entries(ROLES).map(([k,n])=>`<option value="${k}" ${u.rol===k?"selected":""}>${n}</option>`).join("")}<option value="" ${!u.rol?"selected":""}>Sin acceso</option></select></td><td><button class="btn sm" data-udel="${esc(id)}">Quitar</button></td></tr>`).join("")||`<tr><td colspan="4" class="empty">Aún no hay personas dadas de alta.</td></tr>`}</table></div>`+empresaPanel();
 }
 
@@ -471,7 +711,7 @@ function openCliente(id,tab="resumen"){
    <label class="fl">Precio página B/N<input class="f" type="number" step="0.01" data-ct="bn" value="${esc(k.bn??"")}" ${dis}></label><label class="fl">Precio página color<input class="f" type="number" step="0.01" data-ct="color" value="${esc(k.color??"")}" ${dis}></label>
    <label class="fl">Crédito (días)<input class="f" type="number" data-ct="credito" value="${esc(k.credito??30)}" ${dis}></label><label class="fl">Equipo de respaldo incluido<select class="f" data-ct="respaldo" ${dis}><option value="">No</option><option value="si" ${k.respaldo==="si"?"selected":""}>Sí</option></select></label>
    <label class="fl full">Notas (penalización por cancelación, acuerdos especiales)<textarea class="f" data-ct="notas" ${dis}>${esc(k.notas||"")}</textarea></label></div>
-   ${canW()?`<div class="row" style="margin-top:12px"><button class="btn pri" data-a="saveContrato" data-id="${esc(id)}">Guardar contrato</button>${ci.k==="warn"||ci.k==="bad"?(()=>{const kk=(c.contactos||[])[0];return kk?.tel?`<a class="btn wa" target="_blank" rel="noopener" href="${waLink(kk.tel,PLANTILLAS.find(x=>x.id==="renovacion").t.replace("{contacto}",kk.nombre||""))}">Aviso de renovación por WhatsApp</a>`:""})():""}</div>`:""}</div>`}
+   ${canW()?`<div class="row" style="margin-top:12px"><button class="btn pri" data-a="saveContrato" data-id="${esc(id)}">Guardar contrato</button><button class="btn" data-a="abrirContrato" data-id="${esc(id)}">Generar contrato (Word)</button>${ci.k==="warn"||ci.k==="bad"?(()=>{const kk=(c.contactos||[])[0];return kk?.tel?`<a class="btn wa" target="_blank" rel="noopener" href="${waLink(kk.tel,PLANTILLAS.find(x=>x.id==="renovacion").t.replace("{contacto}",kk.nombre||""))}">Aviso de renovación por WhatsApp</a>`:""})():""}</div>`:""}</div>`}
   if(tab==="docs"){const al=c.alta||{};const dis=canW()?"":"disabled";b=`<div class="panel"><h2>Documentación para el contrato <span class="muted sm">${nDocs} de ${DOCS_CLI.length}</span></h2><p class="muted sm" style="margin-top:0">Marca cada documento al recibirlo. Guarda los archivos en la carpeta del cliente (no se suben aquí: son datos personales).</p>
    ${DOCS_CLI.map((d,i)=>`<div class="row" style="padding:7px 0;border-top:1px solid var(--line)"><label class="row" style="flex:1;min-width:220px;flex-wrap:nowrap"><input type="checkbox" data-dk="${i}" ${dk[i]?.ok?"checked":""} ${dis}><span>${esc(d)}</span></label><input class="f" type="date" data-dkf="${i}" value="${esc(dk[i]?.f||"")}" ${dis} style="width:150px"><input class="f" data-dkn="${i}" value="${esc(dk[i]?.n||"")}" placeholder="Nota (vigencia, falta firma…)" ${dis} style="flex:1;min-width:160px"></div>`).join("")}</div>
    <div class="panel" style="margin-top:14px"><h2>Alta del cliente <span class="muted sm">${ALTA_PASOS.filter(([k])=>al[k]?.ok).length} de ${ALTA_PASOS.length} pasos</span></h2>
@@ -518,7 +758,7 @@ function openEquipo(id){
    ${historialEq(e).map(h=>`<div class="hev"><span class="hdot" style="background:${h.col}"></span><div style="min-width:0"><div class="sm"><b>${esc(h.tipo)}</b>${h.folio?` · <span class="click" style="text-decoration:underline" data-tk="${esc(h.tid)}">${esc(h.folio)}</span>`:""} <span class="muted">· ${fd(h.t)}${h.por?" · "+esc(nombreDe(h.por)):""}</span></div>${h.txt?`<div class="sm" style="white-space:pre-wrap">${esc(h.txt)}</div>`:""}</div></div>`).join("")||`<div class="muted sm">Sin eventos registrados todavía.</div>`}</div>`,L=>bindCommon(L));
 }
 function waLink(tel,txt){let n=String(tel||"").replace(/\D/g,"");if(n.length===10)n="52"+n;return `https://wa.me/${n}?text=${encodeURIComponent(txt)}`}
-function fillTpl(p,t){const c=S.clientes.get(t.clienteId)||{};const k=(c.contactos||[])[0]||{};return p.t.replace(/\{(\w+)\}/g,(_,v)=>({contacto:t.reportadoPor||k.nombre||"",cliente:t.cliente||c.nombre||"",folio:t.folio||"",modelo:t.modelo||"",serie:t.serie||"",tecnico:nombreDe(t.tecnicoId),compromiso:fdt(t.compromiso)}[v]??""))}
+function fillTpl(p,t){const c=S.clientes.get(t.clienteId)||{};const k=(c.contactos||[])[0]||{};const F=MS_FIJOS();return p.t.replace(/\{(\w+)\}/g,(m,v)=>({contacto:t.reportadoPor||k.nombre||"",cliente:t.cliente||c.nombre||"",folio:t.folio||"",modelo:t.modelo||"",serie:t.serie||"",tecnico:nombreDe(t.tecnicoId),compromiso:fdt(t.compromiso),encuesta:encuestaUrl(t),fecha:t.prog?sdate(t.prog)+(t.hora?" a las "+t.hora:""):m,...F}[v]??m))}
 function openTicket(id){
   const t=S.tickets.get(id);if(!t)return;S.openTicket=id;
   const s=slaInfo(t);const w=canW()&&(can("servicio")||misIds().includes(t.tecnicoId));
@@ -555,7 +795,8 @@ function openTicket(id){
    ${w?`<canvas class="sig" id="sig"></canvas><div class="row" style="margin-top:6px"><button class="btn sm" data-a="sigClear">Borrar firma</button></div>`:""}
    ${w?`<div class="row" style="margin-top:16px"><button class="btn pri" data-a="saveTk" data-id="${esc(id)}">Guardar</button><button class="btn" data-a="closeTk" data-id="${esc(id)}">Guardar y cerrar servicio</button><button class="btn" data-a="pdfTk" data-id="${esc(id)}">Reporte PDF</button></div>`:`<div class="row" style="margin-top:16px"><button class="btn" data-a="pdfTk" data-id="${esc(id)}">Reporte PDF</button></div>`}
   </div>
-  <div class="panel" style="margin-top:14px"><h2>Avisar al cliente por WhatsApp</h2><div class="row">${["recibido","camino","cerrado"].map(k=>{const p=PLANTILLAS.find(x=>x.id===k);return tel?`<a class="btn wa sm" target="_blank" rel="noopener" href="${waLink(tel,fillTpl(p,t))}">${esc(p.n)}</a>`:""}).join("")||`<span class="muted sm">Agrega un teléfono al ticket o un contacto al cliente para enviar avisos.</span>`}</div></div>
+  ${t.encuesta?`<div class="panel" style="margin-top:14px"><h2>Encuesta del cliente ${encMala(t.encuesta)?(t.encuesta.atendida?'<span class="chip">Atendida</span>':'<span class="chip bad">Revisar</span>'):'<span class="chip ok">Bien</span>'}</h2>${encResumen(t)}<div class="muted sm" style="margin-top:6px">Contestada el ${fdt(t.encuesta.t)}</div></div>`:""}
+  <div class="panel" style="margin-top:14px"><h2>Avisar al cliente</h2><p class="muted sm" style="margin-top:0">«Copiar» sirve para pegarlo donde sea; el botón verde abre WhatsApp con el mensaje listo.</p>${["recibido","cita","camino","refaccion","cerrado","encuesta_rec"].map(k=>{const p=PLANTILLAS.find(x=>x.id===k);const txt=fillTpl(p,t);return `<div class="row" style="justify-content:space-between;border-top:1px solid var(--line);padding:7px 0"><span class="sm b">${esc(p.n)}</span><span class="row"><button class="btn sm" data-copy="${esc(txt)}">Copiar</button>${tel?`<a class="btn wa sm" target="_blank" rel="noopener" href="${esc(waLink(tel,txt))}">WhatsApp</a>`:""}</span></div>`}).join("")}${tel?"":`<span class="muted sm">Agrega un teléfono al ticket o un contacto al cliente para abrir WhatsApp directo.</span>`}</div>
   <div class="panel" style="margin-top:14px"><h2>Historial</h2>${(t.hist||[]).slice().reverse().map(h=>`<div class="sm"><span class="muted">${fdt(h.t)}</span> · ${esc(h.ev)} <span class="muted">(${esc(nombreDe(h.por)||"")})</span></div>`).join("")}</div>
   ${S.rol==="admin"?`<div class="row" style="margin-top:14px"><button class="btn sm" data-a="delTk" data-id="${esc(id)}" style="color:var(--bad)">Eliminar ticket</button><span class="muted sm">Solo para pruebas o duplicados. No se puede deshacer.</span></div>`:""}`,L=>{bindCommon(L);setupSig(L)});
 }
@@ -808,7 +1049,7 @@ function pdfArrPres(q){
 }
 
 /* ===================== eventos ===================== */
-function bindView(v){const m=$("#main");bindCommon(m);if(v==="prospectos")bindProsp(m);if(v==="venta"||v==="midia")bindVenta(m);if(v==="agenda")bindAgenda(m);if(v==="midia"||v==="equipos")bindEscaner(m);
+function bindView(v){const m=$("#main");bindCommon(m);if(v==="mensajes")bindMensajes(m);if(v==="prospectos")bindProsp(m);if(v==="venta"||v==="midia")bindVenta(m);if(v==="agenda")bindAgenda(m);if(v==="midia"||v==="equipos")bindEscaner(m);
   m.querySelectorAll("[data-f]").forEach(el=>{const [g,k]=el.dataset.f.split(".");const h=()=>{S.filters[g]={...(S.filters[g]||{}),[k]:el.type==="checkbox"?el.checked:el.value};const pos=el.selectionStart;render();const n=m.querySelector(`[data-f="${el.dataset.f}"]`);if(n&&el.tagName==="INPUT"&&el.type!=="checkbox"){n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}};el.addEventListener(el.tagName==="INPUT"&&el.type!=="checkbox"?"input":"change",h)});
   m.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{S.filters.tonTab=b.dataset.tab;render()});
   // drag & drop
@@ -852,6 +1093,14 @@ function bindCommon(root){
 function shrink(file){return new Promise(res=>{const img=new Image();img.onload=()=>{const s=Math.min(1,1600/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=img.width*s;c.height=img.height*s;c.getContext("2d").drawImage(img,0,0,c.width,c.height);c.toBlob(b=>res(b||file),"image/jpeg",.82)};img.onerror=()=>res(file);img.src=URL.createObjectURL(file)})}
 const val=(r,s)=>(r.querySelector(s)?.value||"").trim();
 const A={
+ abrirContrato(id){abrirContrato(id)},
+ async saveContratoGen(id,L){const {lg,cg}=leerContratoForm(L);if(await upd("clientes/"+id,{legal:lg,contratoGen:cg},"Datos del contrato guardados")){const c=S.clientes.get(id);if(c){c.legal=lg;c.contratoGen=cg}}},
+ async genContrato(id,L){const c=S.clientes.get(id);const {lg,cg}=leerContratoForm(L);
+  if(!Object.values(cg.eqs).some(g=>g.on)&&Object.keys(cg.eqs).length){toast("Marca al menos un equipo");return}
+  try{await cargarContrato()}catch(e){toast("No se pudo cargar la plantilla del contrato. Revisa tu conexión.");return}
+  if(canW())upd("clientes/"+id,{legal:lg,contratoGen:cg});c.legal=lg;c.contratoGen=cg;
+  bajar(contratoDocx(c,lg,cg),"Contrato_"+(lg.razon||c.nombre||"cliente").replace(/[^\wÁÉÍÓÚÑáéíóúñ]+/g,"_").slice(0,40)+".docx");toast("Contrato descargado. Ábrelo en Word para revisarlo.")},
+ msLimpiar(){MS.v={};render()},
  nuevoTicket:()=>nuevoTicket(),
  nuevoTicketCli:id=>nuevoTicket({clienteId:id}),
  nuevoTicketEq:id=>nuevoTicket({equipoId:id}),
@@ -994,7 +1243,7 @@ Object.assign(A,{
  async saveEmpresa(_,L){const d={};L.querySelectorAll("[data-emp]").forEach(el=>d[el.dataset.emp]=el.value.trim());if(await save("config/empresa",d,"Datos de la empresa guardados"))S.empresa=d}
 });
 function bindCotRows(L){L.querySelectorAll("[data-qdel]").forEach(b=>b.onclick=()=>{const rows=L.querySelectorAll("[data-qrow]");if(rows.length>1)b.closest("[data-qrow]").remove()})}
-const EMP_CAMPOS=[["nombre","Razón social"],["rfc","RFC"],["dir","Dirección (pie de los PDF)"],["dirFiscal","Dirección fiscal (si es distinta)"],["waTxt","WhatsApp (como se imprime)"],["tel","Teléfono fijo"],["correo","Correo de servicio"],["web","Sitio web"],["facContacto","Contacto de facturación"],["facCorreo","Correo de facturación"],["banco","Banco"],["cuenta","Número de cuenta"],["clabe","CLABE interbancaria"],["sucursal","Sucursal"]];
+const EMP_CAMPOS=[["nombre","Razón social"],["rfc","RFC"],["repTrato","Trato del representante legal (EL LIC., LA SRA.…)"],["repNombre","Representante legal (firma los contratos)"],["escritura","Escritura constitutiva N.º"],["notario","Notario de la escritura (ej. NOTARIO PÚBLICO Nº 85 LIC. …)"],["dir","Dirección (pie de los PDF)"],["dirFiscal","Dirección fiscal (si es distinta)"],["waTxt","WhatsApp (como se imprime)"],["tel","Teléfono fijo"],["correo","Correo de servicio"],["web","Sitio web"],["facContacto","Contacto de facturación"],["facCorreo","Correo de facturación"],["banco","Banco"],["cuenta","Número de cuenta"],["clabe","CLABE interbancaria"],["sucursal","Sucursal"]];
 function empresaPanel(){const E=EMP();return `<div class="panel" style="margin-top:16px"><h2>Datos de la empresa</h2><p class="muted sm" style="margin-top:0">Salen en los reportes, vales y cotizaciones. Los datos bancarios solo aparecen en las cotizaciones donde marques «Incluir datos fiscales y bancarios».</p>
   <div class="form">${EMP_CAMPOS.map(([k,n])=>`<label class="fl">${n}<input class="f" data-emp="${k}" value="${esc(E[k]||"")}"></label>`).join("")}</div><div class="row" style="margin-top:12px"><button class="btn pri" data-a="saveEmpresa">Guardar datos de la empresa</button></div></div>`}
 
