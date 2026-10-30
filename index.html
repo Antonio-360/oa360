@@ -160,7 +160,7 @@ canvas.sig{width:100%;height:170px;background:#fff;border:1px dashed var(--muted
 <body>
 <div class="app" id="app">
   <aside>
-    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.10 · 30 oct</span></small></div></div>
+    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.11 · 30 oct</span></small></div></div>
     <nav id="nav"></nav>
     <div class="who" id="who">Conectando…</div>
   </aside>
@@ -343,27 +343,8 @@ function renderNav(){
   const mob=S.rol==="tecnico"?["midia","equipos"]:S.rol==="jefe_tecnico"?["midia","servicio","equipos","venta","toner"]:["inicio","servicio","clientes","prospectos","venta","comercial"];
   $("#mnav").innerHTML=vs.filter(v=>mob.includes(v.id)).map(v=>`<a href="#${v.id}" class="${v.id===c?"on":""}">${svg(v.id)}${v.n.split(" ")[0]}</a>`).join("");
 }
-/* ===================== alta inicial de técnicos y vehículos =====================
-   Se aplica sola la primera vez que entra administración, dirección o el jefe técnico.
-   Si ya existen (mismas placas o mismo nombre), no se duplican ni se pisan los cambios hechos en Agenda. */
-const SEED_TEC=[
- {vid:"veh-lht687a",veh:{nombre:"March gris",placas:"LHT-687-A",marca:"Nissan",modelo:"March",anio:2018,notas:"Color: gris",activo:true},tec:"Jorge Reyes Vázquez",tel:"55 1870 7678"},
- {vid:"veh-nyf317b",veh:{nombre:"March blanco",placas:"NYF-317-B",marca:"Nissan",modelo:"March",anio:2018,notas:"Color: blanco",activo:true},tec:"Jonathan García Buendía",tel:"55 2716 4184"},
- {vid:"veh-nex022a",veh:{nombre:"RAM 700 roja",placas:"NEX-022-A",marca:"RAM",modelo:"700",anio:2024,notas:"Color: rojo",activo:true},tec:"Víctor Hugo García Ceras",tel:"55 6559 3158"}];
-let seedHecho=false;
-async function seedTecnicos(){
-  if(seedHecho||!S.ready.tecnicos||!S.ready.vehiculos||!canW()||!(S.owner||["admin","direccion","jefe_tecnico"].includes(S.rol)))return;seedHecho=true;
-  const norm=x=>String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim().replace(/\s+/g," ");
-  const pl=x=>String(x||"").replace(/[^A-Za-z0-9]/g,"").toUpperCase();
-  try{for(const x of SEED_TEC){const v=[...S.vehiculos.values()].find(v=>pl(v.placas)===pl(x.veh.placas));const vid=v?v._id:x.vid;
-    if(!v)await db.doc("vehiculos/"+vid).set(x.veh);
-    const t=[...S.tecs.values()].find(t=>norm(t.nombre)===norm(x.tec));
-    if(!t)await db.doc("tecnicos/tec-"+x.vid.slice(4)).set({nombre:x.tec,tel:x.tel,vehiculoId:vid,activo:true,correo:"",zona:"",especialidad:"",notas:""});
-    else{const ch={};if(!t.tel)ch.tel=x.tel;if(!t.vehiculoId)ch.vehiculoId=vid;if(Object.keys(ch).length)await db.doc("tecnicos/"+t._id).update(ch)}}}
-  catch(e){console.warn("alta inicial de técnicos",e)}}
 function render(){
   if(!S.gateOk){return}
-  seedTecnicos();
   renderNav();
   const c=cur();const fn={inicio:vInicio,midia:vMiDia,servicio:vServicio,preventivos:vPrev,clientes:vClientes,equipos:vEquipos,toner:vToner,comercial:vComercial,cotiz:vCotiz,prospectos:vProspectos,agenda:vAgenda,venta:vVenta,mensajes:vMensajes,config:vConfig}[c];
   const m=$("#main");const st=m.scrollTop;m.innerHTML=fn();m.scrollTop=st;bindView(c);
