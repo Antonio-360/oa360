@@ -151,6 +151,8 @@ canvas.sig{width:100%;height:170px;background:#fff;border:1px dashed var(--muted
 .agcols{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;align-items:flex-start}.agcol{min-width:240px;flex:1}.agc .t{font-size:13px}.agsem td{vertical-align:top;min-width:110px}
 
 .hev{display:grid;grid-template-columns:14px 1fr;gap:8px;padding:9px 0;border-top:1px dashed var(--line)}.hev:first-of-type{border-top:0}.hdot{width:10px;height:10px;border-radius:50%;margin-top:4px}
+
+.form>*{min-width:0}.form .f{max-width:100%;min-width:0}.form .row{flex-wrap:nowrap}
 </style>
 </head>
 <body>
@@ -203,7 +205,7 @@ const S={clientes:new Map(),tecs:new Map(),vehiculos:new Map(),plantillas:new Ma
 let db=null;
 const ROLES={admin:"Administración",direccion:"Dirección",comercial:"Comercial",atencion:"Atención a clientes",jefe_tecnico:"Jefe técnico",tecnico:"Técnico"};
 const ESTADOS=[["abierto","Abierto"],["asignado","Asignado"],["en_camino","En camino"],["en_sitio","En sitio"],["refaccion","Esperando refacción"],["cerrado","Cerrado"]];
-const TIPOS=["Correctivo","Preventivo","Instalación","Retiro","Entrega de tóner","Cambio de equipo"];
+const TIPOS=["Correctivo","Preventivo","Instalación","Retiro","Entrega de tóner","Cambio de equipo","Soporte remoto","Toma de lectura"];
 const ETAPAS=[["nuevo","Nuevo"],["contactado","Contactado"],["diagnostico","Diagnóstico / visita"],["propuesta","Propuesta enviada"],["negociacion","Negociación"],["ganado","Ganado"],["perdido","Perdido"]];
 const CHECK=["Página de estado","Alimentador","Cristales","Gomas","Fusor","Limpieza de chasis","Bote residual (vaciar)","Limpieza general de tapas"];
 const FINAL=["Cerrado","Refacciones","Software","Capacitación","Cambio de equipo","Abierto"];
@@ -323,6 +325,7 @@ function vInicio(){
       <table class="tbl"><tr class="click" data-go="servicio"><td>Tickets abiertos</td><td class="b">${ab.length}</td></tr>
       <tr class="click" data-go="servicio"><td>Fuera de compromiso</td><td class="b" style="color:${venc?"var(--bad)":"inherit"}">${venc}</td></tr>
       <tr class="click" data-go="preventivos"><td>Preventivos por programar</td><td class="b">${prevs}</td></tr>
+      <tr class="click" data-goct="1"><td>Contratos por vencer (90 días)</td><td class="b" style="color:${[...S.clientes.values()].some(c=>contratoInfo(c).k==="bad"&&c.contrato?.tipo==="firmado")?"var(--bad)":"inherit"}">${[...S.clientes.values()].filter(c=>["warn","bad"].includes(contratoInfo(c).k)&&c.contrato?.tipo==="firmado").length}</td></tr>
       <tr class="click" data-go="toner"><td>Solicitudes de tóner pendientes</td><td class="b">${[...S.sol.values()].filter(s=>s.estado!=="entregado").length}</td></tr>
       <tr class="click" data-go="comercial"><td>Oportunidades abiertas</td><td class="b">${opps.length} · ${money(pipe)}/mes</td></tr></table>
     </div>
@@ -378,13 +381,14 @@ function vClientes(){
   const f=S.filters.cli||{};let C=[...S.clientes.values()];
   if(f.q){const q=f.q.toLowerCase();C=C.filter(c=>(c.nombre+" "+(c.rfc||"")+" "+(c.municipio||"")).toLowerCase().includes(q))}
   if(f.est)C=C.filter(c=>c.estatus===f.est);else C=C.filter(c=>c.estatus!=="inactivo"||f.q);
+  if(f.ct==="vence")C=C.filter(c=>["warn","bad"].includes(contratoInfo(c).k)&&c.contrato?.tipo==="firmado");else if(f.ct==="sin")C=C.filter(c=>!c.contrato?.tipo||c.contrato.tipo==="palabra");
   const last=mesesTodos().slice(-1)[0];
   const vol=new Map();S.equipos.forEach(e=>{if(e.estatus==="instalado")vol.set(e.clienteId,(vol.get(e.clienteId)||0)+totalMes(e,last))});
   C.sort((a,b)=>(vol.get(b._id)||0)-(vol.get(a._id)||0)||a.nombre.localeCompare(b.nombre));
   return header("Clientes",`${[...S.clientes.values()].filter(c=>c.estatus==="activo").length} activos de ${S.clientes.size} registrados.`,canW()?`<button class="btn pri" data-a="nuevoCliente">+ Nuevo cliente</button>`:"")+
-  `<div class="filters"><input class="f" placeholder="Buscar por nombre, RFC o municipio" data-f="cli.q" value="${esc(f.q||"")}" style="flex:1;min-width:200px"><select class="f" data-f="cli.est"><option value="">Activos y prospectos</option>${["activo","prospecto","inactivo"].map(x=>`<option value="${x}" ${f.est===x?"selected":""}>${x[0].toUpperCase()+x.slice(1)}</option>`).join("")}</select></div>
-  <div class="panel wrap"><table class="tbl"><tr><th>Cliente</th><th>Estatus</th><th>Equipos</th><th>Páginas ${last?mlabel(last):""}</th><th>Tickets abiertos</th></tr>
-  ${C.map(c=>{const ab=[...S.tickets.values()].filter(t=>t.clienteId===c._id&&t.estado!=="cerrado").length;return `<tr class="click" data-cli="${esc(c._id)}"><td class="b">${esc(c.nombre)}${c.municipio?`<div class="muted sm" style="font-weight:400">${esc(c.municipio)}</div>`:""}</td><td><span class="chip ${c.estatus==="activo"?"ok":c.estatus==="prospecto"?"blue":""}">${esc(c.estatus)}</span></td><td>${c.equiposActivos??0}</td><td>${fmt(vol.get(c._id)||0)}</td><td>${ab||"—"}</td></tr>`}).join("")||`<tr><td colspan="5" class="empty">Sin resultados.</td></tr>`}</table></div>`;
+  `<div class="filters"><input class="f" placeholder="Buscar por nombre, RFC o municipio" data-f="cli.q" value="${esc(f.q||"")}" style="flex:1;min-width:200px"><select class="f" data-f="cli.est"><option value="">Activos y prospectos</option>${["activo","prospecto","inactivo"].map(x=>`<option value="${x}" ${f.est===x?"selected":""}>${x[0].toUpperCase()+x.slice(1)}</option>`).join("")}</select><select class="f" data-f="cli.ct"><option value="">Todos los contratos</option><option value="vence" ${f.ct==="vence"?"selected":""}>Por vencer o vencidos (90 días)</option><option value="sin" ${f.ct==="sin"?"selected":""}>Sin contrato o de palabra</option></select></div>
+  <div class="panel wrap"><table class="tbl"><tr><th>Cliente</th><th>Estatus</th><th>Equipos</th><th>Páginas ${last?mlabel(last):""}</th><th>Tickets abiertos</th><th>Contrato</th></tr>
+  ${C.map(c=>{const ab=[...S.tickets.values()].filter(t=>t.clienteId===c._id&&t.estado!=="cerrado").length;return `<tr class="click" data-cli="${esc(c._id)}"><td class="b">${esc(c.nombre)}${c.municipio?`<div class="muted sm" style="font-weight:400">${esc(c.municipio)}</div>`:""}</td><td><span class="chip ${c.estatus==="activo"?"ok":c.estatus==="prospecto"?"blue":""}">${esc(c.estatus)}</span></td><td>${c.equiposActivos??0}</td><td>${fmt(vol.get(c._id)||0)}</td><td>${ab||"—"}</td><td>${(()=>{const i=contratoInfo(c);return `<span class="chip ${i.k}">${esc(i.txt)}</span>`})()}</td></tr>`}).join("")||`<tr><td colspan="6" class="empty">Sin resultados.</td></tr>`}</table></div>`;
 }
 function vEquipos(){
   const f=S.filters.eq||{};let E=[...S.equipos.values()];
@@ -432,6 +436,12 @@ function drawer(html,onBind){const L=$("#layer");L.innerHTML=`<div class="ov" da
 function closeDr(){$("#layer").innerHTML="";S.openTicket=null}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDr()});
 function sparkBars(e){const ms=mesesTodos();const mx=Math.max(1,...ms.map(m=>totalMes(e,m)));return `<div class="bars" style="height:140px">${ms.map(m=>{const v=(e.lect||{})[m]||{};return `<div class="bw" title="${mlabel(m)}: ${fmt(v.bn)} B/N · ${fmt(v.color)} color"><div class="st" style="height:${Math.round(100*((v.bn||0)+(v.color||0))/mx)}%"><div style="flex:${v.bn||0};background:var(--navy2);min-height:1px"></div><div style="flex:${v.color||0};background:var(--m)"></div></div><small>${mlabel(m).slice(0,3)}</small></div>`}).join("")}</div>`}
+const DOCS_CLI=["Acta constitutiva","Comprobante de domicilio","Identificación del representante legal","Poder del representante legal","Constancia de situación fiscal actualizada"];
+const ALTA_PASOS=[["acepta","Correo de aceptación de la propuesta","Comercial"],["docs","Documentos completos","Madelein"],["contrato","Contrato firmado","Comercial"],["entrega","Entrega programada (logística y datos del cliente)","Madelein"],["instala","Equipos instalados","Lalo y técnicos"],["config","Software, usuarios y contraseñas configurados","Mauricio"]];
+function contratoInfo(c){const k=c.contrato||{};if(!k.tipo)return{k:"",txt:"Sin datos de contrato",col:""};if(k.tipo==="palabra")return{k:"warn",txt:"De palabra (sin contrato firmado)"};
+  const v=k.vence;if(!v)return{k:"",txt:"Firmado · sin fecha de vencimiento"};const d=Math.round((new Date(v+"T12:00:00").getTime()-Date.now())/864e5);
+  return d<0?{k:"bad",txt:`Vencido hace ${-d} días`,d}:d<=90?{k:"warn",txt:`Vence en ${d} días`,d}:{k:"ok",txt:"Vigente hasta "+fd(new Date(v+"T12:00:00").getTime()),d}}
+const sumaMeses=(f,m)=>{if(!f||!m)return"";const d=new Date(f+"T12:00:00Z");d.setUTCMonth(d.getUTCMonth()+(+m));return d.toISOString().slice(0,10)};
 function openCliente(id,tab="resumen"){
   const c=S.clientes.get(id);if(!c)return;
   const E=[...S.equipos.values()].filter(e=>e.clienteId===id);const inst=E.filter(e=>e.estatus==="instalado");
@@ -440,7 +450,8 @@ function openCliente(id,tab="resumen"){
   const agg=ms.map(m=>{let b=0,cc=0;inst.forEach(e=>{const v=(e.lect||{})[m];if(v){b+=v.bn||0;cc+=v.color||0}});return{m,b,c:cc}});
   const mx=Math.max(1,...agg.map(x=>x.b+x.c));
   const prom=Math.round(agg.slice(-3).reduce((s,x)=>s+x.b+x.c,0)/3);
-  const tabs=[["resumen","Resumen"],["equipos",`Equipos (${inst.length})`],["tickets",`Tickets (${T.length})`],["contactos",`Contactos (${(c.contactos||[]).length})`],["datos","Datos"]];
+  const ci=contratoInfo(c),dk=c.docs||{},nDocs=DOCS_CLI.filter((_,i)=>dk[i]?.ok).length;
+  const tabs=[["resumen","Resumen"],["equipos",`Equipos (${inst.length})`],["tickets",`Tickets (${T.length})`],["contrato","Contrato"],["docs",`Documentos ${nDocs}/${DOCS_CLI.length}`],["contactos",`Contactos (${(c.contactos||[]).length})`],["datos","Datos"]];
   let b="";
   if(tab==="resumen")b=`<div class="kpis" style="grid-template-columns:repeat(3,1fr)"><div class="kpi"><i class="ink" style="background:var(--c)"></i><div class="v">${inst.length}</div><div class="l">equipos instalados</div></div><div class="kpi"><i class="ink" style="background:var(--m)"></i><div class="v">${fmt(prom)}</div><div class="l">páginas/mes (últ. 3 meses)</div></div><div class="kpi"><i class="ink" style="background:var(--y)"></i><div class="v">${T.filter(t=>t.estado!=="cerrado").length}</div><div class="l">tickets abiertos</div></div></div>
   <div class="panel" style="margin-top:14px"><h2>Consumo mensual</h2><div class="bars" style="height:150px">${agg.map(x=>`<div class="bw" title="${mlabel(x.m)}: ${fmt(x.b)} B/N · ${fmt(x.c)} color"><div class="st" style="height:${Math.round(100*(x.b+x.c)/mx)}%"><div style="flex:${x.b};background:var(--navy2);min-height:1px"></div><div style="flex:${x.c};background:var(--m)"></div></div><small>${mlabel(x.m).slice(0,3)}</small></div>`).join("")}</div></div>
@@ -449,6 +460,23 @@ function openCliente(id,tab="resumen"){
   if(tab==="tickets")b=`<div class="row" style="margin-bottom:10px">${can("servicio")?`<button class="btn pri" data-a="nuevoTicketCli" data-id="${esc(id)}">+ Ticket para este cliente</button>`:""}</div>`+(T.map(ticketCard).join("")||`<div class="empty">Sin tickets.</div>`);
   if(tab==="contactos")b=`${(c.contactos||[]).map((k,i)=>`<div class="tcard"><div class="row" style="justify-content:space-between"><span class="b">${esc(k.nombre)}</span><span class="muted sm">${esc(k.cargo||"")}</span></div><div class="sm">${esc(k.tel||"")} ${k.correo?" · "+esc(k.correo):""}</div><div class="row" style="margin-top:8px">${k.tel?`<a class="btn wa sm" target="_blank" rel="noopener" href="${waLink(k.tel,"Hola "+k.nombre+", le escribe Office Automation.")}">WhatsApp</a>`:""}${canW()?`<button class="btn sm" data-delcont="${i}" data-id="${esc(id)}">Quitar</button>`:""}</div></div>`).join("")||`<div class="empty">Sin contactos. Agrega a la persona de Sistemas o Compras: es el contacto clave.</div>`}
    ${canW()?`<div class="panel"><h2>Agregar contacto</h2><div class="form"><label class="fl">Nombre<input class="f" id="kn"></label><label class="fl">Cargo<input class="f" id="kc"></label><label class="fl">Teléfono / WhatsApp<input class="f" id="kt" inputmode="tel"></label><label class="fl">Correo<input class="f" id="ke" type="email"></label></div><div class="row" style="margin-top:10px"><button class="btn pri" data-a="addCont" data-id="${esc(id)}">Guardar contacto</button></div></div>`:""}`;
+  if(tab==="contrato"){const k=c.contrato||{};const dis=canW()?"":"disabled";b=`<div class="panel"><div class="row" style="justify-content:space-between;margin-bottom:10px"><b>Estado</b><span class="chip ${ci.k}">${esc(ci.txt)}</span></div><div class="form">
+   <label class="fl">Tipo<select class="f" data-ct="tipo" ${dis}><option value="">—</option><option value="firmado" ${k.tipo==="firmado"?"selected":""}>Contrato firmado</option><option value="palabra" ${k.tipo==="palabra"?"selected":""}>De palabra (sin contrato)</option></select></label>
+   <label class="fl">Esquema de cobro<select class="f" data-ct="esquema" ${dis}>${["Renta + impresiones del mes","Renta con volumen incluido","Solo precio por impresión"].map(x=>`<option ${k.esquema===x?"selected":""}>${x}</option>`).join("")}</select></label>
+   <label class="fl">Fecha de inicio<input class="f" type="date" data-ct="inicio" value="${esc(k.inicio||"")}" ${dis}></label>
+   <label class="fl">Plazo<select class="f" data-ct="plazo" ${dis}>${["12","24","36","48"].map(x=>`<option value="${x}" ${String(k.plazo||"36")===x?"selected":""}>${x} meses</option>`).join("")}</select></label>
+   <label class="fl">Vencimiento<input class="f" type="date" data-ct="vence" value="${esc(k.vence||"")}" ${dis}><span class="muted sm" style="font-weight:400">Si lo dejas vacío se calcula con inicio + plazo.</span></label>
+   <label class="fl">Próximo ajuste por inflación<input class="f" type="date" data-ct="ajuste" value="${esc(k.ajuste||"")}" ${dis}></label>
+   <label class="fl">Renta mensual (MXN + IVA)<input class="f" type="number" step="0.01" data-ct="renta" value="${esc(k.renta??"")}" ${dis}></label><label class="fl">Páginas incluidas al mes<input class="f" type="number" data-ct="incluidas" value="${esc(k.incluidas??"")}" ${dis}></label>
+   <label class="fl">Precio página B/N<input class="f" type="number" step="0.01" data-ct="bn" value="${esc(k.bn??"")}" ${dis}></label><label class="fl">Precio página color<input class="f" type="number" step="0.01" data-ct="color" value="${esc(k.color??"")}" ${dis}></label>
+   <label class="fl">Crédito (días)<input class="f" type="number" data-ct="credito" value="${esc(k.credito??30)}" ${dis}></label><label class="fl">Equipo de respaldo incluido<select class="f" data-ct="respaldo" ${dis}><option value="">No</option><option value="si" ${k.respaldo==="si"?"selected":""}>Sí</option></select></label>
+   <label class="fl full">Notas (penalización por cancelación, acuerdos especiales)<textarea class="f" data-ct="notas" ${dis}>${esc(k.notas||"")}</textarea></label></div>
+   ${canW()?`<div class="row" style="margin-top:12px"><button class="btn pri" data-a="saveContrato" data-id="${esc(id)}">Guardar contrato</button>${ci.k==="warn"||ci.k==="bad"?(()=>{const kk=(c.contactos||[])[0];return kk?.tel?`<a class="btn wa" target="_blank" rel="noopener" href="${waLink(kk.tel,PLANTILLAS.find(x=>x.id==="renovacion").t.replace("{contacto}",kk.nombre||""))}">Aviso de renovación por WhatsApp</a>`:""})():""}</div>`:""}</div>`}
+  if(tab==="docs"){const al=c.alta||{};const dis=canW()?"":"disabled";b=`<div class="panel"><h2>Documentación para el contrato <span class="muted sm">${nDocs} de ${DOCS_CLI.length}</span></h2><p class="muted sm" style="margin-top:0">Marca cada documento al recibirlo. Guarda los archivos en la carpeta del cliente (no se suben aquí: son datos personales).</p>
+   ${DOCS_CLI.map((d,i)=>`<div class="row" style="padding:7px 0;border-top:1px solid var(--line)"><label class="row" style="flex:1;min-width:220px;flex-wrap:nowrap"><input type="checkbox" data-dk="${i}" ${dk[i]?.ok?"checked":""} ${dis}><span>${esc(d)}</span></label><input class="f" type="date" data-dkf="${i}" value="${esc(dk[i]?.f||"")}" ${dis} style="width:150px"><input class="f" data-dkn="${i}" value="${esc(dk[i]?.n||"")}" placeholder="Nota (vigencia, falta firma…)" ${dis} style="flex:1;min-width:160px"></div>`).join("")}</div>
+   <div class="panel" style="margin-top:14px"><h2>Alta del cliente <span class="muted sm">${ALTA_PASOS.filter(([k])=>al[k]?.ok).length} de ${ALTA_PASOS.length} pasos</span></h2>
+   ${ALTA_PASOS.map(([k,l,r])=>`<div class="row" style="padding:7px 0;border-top:1px solid var(--line)"><label class="row" style="flex:1;min-width:240px;flex-wrap:nowrap"><input type="checkbox" data-al="${k}" ${al[k]?.ok||(k==="docs"&&nDocs===DOCS_CLI.length)?"checked":""} ${dis}><span>${esc(l)}</span></label><span class="chip">${esc(r)}</span><input class="f" type="date" data-alf="${k}" value="${esc(al[k]?.f||"")}" ${dis} style="width:150px"></div>`).join("")}
+   ${canW()?`<div class="row" style="margin-top:12px"><button class="btn pri" data-a="saveDocs" data-id="${esc(id)}">Guardar</button>${can("servicio")?`<button class="btn" data-a="nuevoTicketCli" data-id="${esc(id)}">+ Ticket de instalación</button>`:""}</div>`:""}</div>`}
   if(tab==="datos")b=`<div class="panel"><div class="form">${[["nombre","Razón social"],["rfc","RFC"],["municipio","Municipio"],["telefono","Teléfono"],["correo","Correo de facturación"],["responsable","Responsable comercial"]].map(([k,n])=>`<label class="fl">${n}<input class="f" data-cf="${k}" value="${esc(c[k]||"")}" ${canW()?"":"disabled"}></label>`).join("")}<label class="fl">Estatus<select class="f" data-cf="estatus" ${canW()?"":"disabled"}>${["activo","prospecto","inactivo"].map(x=>`<option ${c.estatus===x?"selected":""}>${x}</option>`).join("")}</select></label><label class="fl full">Notas<textarea class="f" data-cf="notas" ${canW()?"":"disabled"}>${esc(c.notas||"")}</textarea></label></div>${canW()?`<div class="row" style="margin-top:12px"><button class="btn pri" data-a="saveCli" data-id="${esc(id)}">Guardar cambios</button></div>`:""}</div>`;
   drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>${esc(c.nombre)}</h2><div class="muted">${esc(c.estatus)}${c.municipio?" · "+esc(c.municipio):""}</div><div class="tabs">${tabs.map(([k,n])=>`<button class="${tab===k?"on":""}" data-ctab="${k}">${n}</button>`).join("")}</div>${b}`,L=>{
     L.querySelectorAll("[data-ctab]").forEach(x=>x.onclick=()=>openCliente(id,x.dataset.ctab));bindCommon(L)});
@@ -484,7 +512,7 @@ function openEquipo(id){
    <label class="fl">Fecha de instalación<input class="f" type="date" data-ef="instalado" value="${esc(e.instalado||"")}" ${canW()?"":"disabled"}></label>
    <label class="fl full">Ubicación<input class="f" data-ef="ubicacion" value="${esc(e.ubicacion)}" ${canW()?"":"disabled"}></label>
    <label class="fl full">Notas<textarea class="f" data-ef="notas" ${canW()?"":"disabled"}>${esc(e.notas||"")}</textarea></label></div>
-   ${canW()?`<div class="row" style="margin-top:12px"><button class="btn pri" data-a="saveEq" data-id="${esc(id)}">Guardar</button>${can("servicio")?`<button class="btn" data-a="nuevoTicketEq" data-id="${esc(id)}">+ Ticket para este equipo</button>`:""}</div>`:""}</div>
+   ${canW()?`<div class="row" style="margin-top:12px"><button class="btn pri" data-a="saveEq" data-id="${esc(id)}">Guardar</button>${can("servicio")?`<button class="btn" data-a="nuevoTicketEq" data-id="${esc(id)}">+ Ticket para este equipo</button>`:""}${["retirado","almacen","taller"].includes(e.estatus)&&can("venta")?`<button class="btn" data-a="eqAVenta" data-id="${esc(id)}">Pasar a Venta</button>`:""}</div>`:""}</div>
   <div class="panel" style="margin-top:14px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Historial del equipo <span class="muted sm">${historialEq(e).length} eventos</span></h2><div class="row"><button class="btn sm" data-a="pdfHistEq" data-id="${esc(id)}">PDF del historial</button></div></div>
    ${canW()?`<div class="row" style="margin:12px 0"><select class="f" id="be_t">${BIT_TIPOS.map(x=>`<option>${x}</option>`).join("")}</select><input class="f" type="date" id="be_f" value="${new Date(Date.now()+TZ).toISOString().slice(0,10)}"><input class="f" id="be_x" placeholder="Qué pasó: p. ej. se mudó al 2.º piso, cambio de tarjeta principal en taller…" style="flex:1;min-width:200px"><button class="btn sm pri" data-a="addBitacora" data-id="${esc(id)}">Agregar al historial</button></div>`:""}
    ${historialEq(e).map(h=>`<div class="hev"><span class="hdot" style="background:${h.col}"></span><div style="min-width:0"><div class="sm"><b>${esc(h.tipo)}</b>${h.folio?` · <span class="click" style="text-decoration:underline" data-tk="${esc(h.tid)}">${esc(h.folio)}</span>`:""} <span class="muted">· ${fd(h.t)}${h.por?" · "+esc(nombreDe(h.por)):""}</span></div>${h.txt?`<div class="sm" style="white-space:pre-wrap">${esc(h.txt)}</div>`:""}</div></div>`).join("")||`<div class="muted sm">Sin eventos registrados todavía.</div>`}</div>`,L=>bindCommon(L));
@@ -539,14 +567,21 @@ function setupSig(L){const c=L.querySelector("#sig");if(!c)return;sigDirty=false
   c.addEventListener("pointerup",()=>dn=false)}
 
 /* ===================== formularios rápidos ===================== */
-function equipoPicker(pre){
-  return `<label class="fl full">Equipo (serie, modelo o cliente)<div class="row"><input class="f" id="eqq" placeholder="Ej. R4V2532282 o Clavos" value="${esc(pre||"")}" autocomplete="off" style="flex:1">${botonEscanear("tk_scan")}</div></label><div id="eqres" class="full"></div>`;
-}
+function equipoPicker(pre,preCli){const cl=preCli?S.clientes.get(preCli):null;
+  return `<label class="fl">Cliente<input class="f" id="tk_clin" list="tk_clis" placeholder="Escribe o elige el cliente" value="${esc(cl?.nombre||"")}" autocomplete="off"></label><datalist id="tk_clis">${[...S.clientes.values()].filter(c=>c.estatus!=="inactivo").sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(c=>`<option value="${esc(c.nombre)}">`).join("")}</datalist>
+   <label class="fl">Equipo<select class="f" id="tk_eqs">${eqOpts(preCli)}</select></label>
+   <label class="fl full">o busca por serie / modelo<div class="row"><input class="f" id="eqq" placeholder="Ej. R4V2532282" value="${esc(pre||"")}" autocomplete="off" style="flex:1">${botonEscanear("tk_scan")}</div></label><div id="eqres" class="full"></div>`;}
+function eqOpts(cli,sel){const E=cli?[...S.equipos.values()].filter(e=>e.clienteId===cli&&e.estatus!=="retirado").sort((a,b)=>(a.ubicacion||"").localeCompare(b.ubicacion||"")):[];
+  return cli?`<option value="">${E.length?"Sin equipo específico":"El cliente no tiene equipos instalados"}</option>${E.map(e=>`<option value="${esc(e._id)}" ${e._id===sel?"selected":""}>${esc(e.serie)} · ${esc(e.modelo)} · ${esc(e.ubicacion||"")}</option>`).join("")}`:`<option value="">Primero elige el cliente</option>`}
+function tkElegir(L,e,c){c=c||S.clientes.get(e?.clienteId);L.querySelector("#tk_eq").value=e?._id||"";L.querySelector("#tk_cli").value=c?._id||e?.clienteId||"";
+  L.querySelector("#tk_clin").value=c?.nombre||e?.cliente||"";L.querySelector("#tk_eqs").innerHTML=eqOpts(c?._id||e?.clienteId,e?._id);
+  L.querySelector("#tk_sel").innerHTML=e?`<b>${esc(e.cliente)}</b> · ${esc(e.modelo)} · serie ${esc(e.serie)} · ${esc(e.ubicacion||"")}`:c?`<b>${esc(c.nombre)}</b> (sin equipo específico)`:"";
+  const k=(c?.contactos||[])[0];if(k){const r=L.querySelector("#tk_rep"),t=L.querySelector("#tk_tel");if(r&&!r.value)r.value=k.nombre||"";if(t&&!t.value)t.value=k.tel||""}}
 function nuevoTicket(pre={}){
   const e=pre.equipoId?S.equipos.get(pre.equipoId):null;
   drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>Nuevo ticket</h2><p class="muted">Se calcula solo el compromiso de atención y se asigna folio.</p>
   <div class="panel"><div class="form">
-   ${equipoPicker(e?e.serie:"")}
+   ${equipoPicker("",pre.clienteId||e?.clienteId)}
    <input type="hidden" id="tk_eq" value="${esc(pre.equipoId||"")}"><input type="hidden" id="tk_cli" value="${esc(pre.clienteId||e?.clienteId||"")}">
    <div class="full sm" id="tk_sel">${e?`<b>${esc(e.cliente)}</b> · ${esc(e.modelo)} · ${esc(e.ubicacion)}`:pre.clienteId?`<b>${esc(S.clientes.get(pre.clienteId)?.nombre)}</b> (sin equipo específico)`:""}</div>
    <label class="fl">Tipo<select class="f" id="tk_tipo">${TIPOS.map(x=>`<option ${pre.tipo===x?"selected":""}>${x}</option>`).join("")}</select></label>
@@ -560,12 +595,15 @@ function nuevoTicket(pre={}){
   </div><div class="row" style="margin-top:14px"><button class="btn pri" data-a="crearTicket">Crear ticket</button></div></div>`,L=>{bindCommon(L);bindPicker(L)});
 }
 function bindPicker(L){const q=L.querySelector("#eqq");if(!q)return;const res=L.querySelector("#eqres");
+  const cn=L.querySelector("#tk_clin");if(cn)cn.addEventListener("change",()=>{const c=[...S.clientes.values()].find(x=>x.nombre.toLowerCase()===cn.value.trim().toLowerCase());if(c){if(c._id!==L.querySelector("#tk_cli").value)tkElegir(L,null,c)}else if(cn.value.trim())toast("Elige un cliente de la lista")});
+  const es=L.querySelector("#tk_eqs");if(es)es.addEventListener("change",()=>{const e=S.equipos.get(es.value);const c=S.clientes.get(L.querySelector("#tk_cli").value);tkElegir(L,e||null,c)});
+  {const e0=S.equipos.get(L.querySelector("#tk_eq").value);if(e0)tkElegir(L,e0)}
   const run=()=>{const v=q.value.trim().toLowerCase();if(v.length<2){res.innerHTML="";return}
    const R=[...S.equipos.values()].filter(e=>e.estatus!=="retirado"&&(e.serie+" "+e.modelo+" "+e.cliente+" "+e.ubicacion).toLowerCase().includes(v)).slice(0,8);
    const C=[...S.clientes.values()].filter(c=>c.nombre.toLowerCase().includes(v)).slice(0,3);
    res.innerHTML=R.map(e=>`<div class="card" data-pick="${esc(e._id)}"><b>${esc(e.serie)}</b> · ${esc(e.modelo)}<div class="muted sm">${esc(e.cliente)} · ${esc(e.ubicacion)}</div></div>`).join("")+C.map(c=>`<div class="card" data-pickc="${esc(c._id)}"><b>${esc(c.nombre)}</b><div class="muted sm">Cliente, sin equipo específico</div></div>`).join("");
-   res.querySelectorAll("[data-pick]").forEach(x=>x.onclick=()=>{const e=S.equipos.get(x.dataset.pick);L.querySelector("#tk_eq").value=e._id;L.querySelector("#tk_cli").value=e.clienteId;L.querySelector("#tk_sel").innerHTML=`<b>${esc(e.cliente)}</b> · ${esc(e.modelo)} · ${esc(e.ubicacion)}`;res.innerHTML="";q.value=e.serie});
-   res.querySelectorAll("[data-pickc]").forEach(x=>x.onclick=()=>{const c=S.clientes.get(x.dataset.pickc);L.querySelector("#tk_eq").value="";L.querySelector("#tk_cli").value=c._id;L.querySelector("#tk_sel").innerHTML=`<b>${esc(c.nombre)}</b> (sin equipo específico)`;res.innerHTML="";q.value=c.nombre})};
+   res.querySelectorAll("[data-pick]").forEach(x=>x.onclick=()=>{const e=S.equipos.get(x.dataset.pick);tkElegir(L,e);res.innerHTML="";q.value=e.serie});
+   res.querySelectorAll("[data-pickc]").forEach(x=>x.onclick=()=>{const c=S.clientes.get(x.dataset.pickc);tkElegir(L,null,c);res.innerHTML="";q.value=""})};
   q.addEventListener("input",run);if(q.value&&!L.querySelector("#tk_eq").value)run()}
 async function folio(pref){ // atómico en la base de datos (06_seguridad.sql)
   const {data,error}=await sb.rpc("oa_folio",{p_pref:pref});if(error){onWriteErr(error);throw error}return data}
@@ -752,6 +790,7 @@ function stPatch(t,k){const ch={estado:k};const n=ESTADOS.find(x=>x[0]===k)[1];i
 async function setUsuarios(u){S.usuarios=u;await save("config/usuarios",{u},"Accesos actualizados")}
 function bindCommon(root){
   root.querySelectorAll("[data-go]").forEach(x=>x.onclick=()=>location.hash=x.dataset.go);
+  root.querySelectorAll("[data-goct]").forEach(x=>x.onclick=()=>{S.filters.cli={...(S.filters.cli||{}),ct:"vence"};location.hash="clientes"});
   root.querySelectorAll("[data-cli]").forEach(x=>x.onclick=e=>{e.stopPropagation();openCliente(x.dataset.cli)});
   root.querySelectorAll("[data-eq]").forEach(x=>x.onclick=e=>{e.stopPropagation();openEquipo(x.dataset.eq)});
   root.querySelectorAll("[data-tk]").forEach(x=>x.onclick=e=>{e.stopPropagation();openTicket(x.dataset.tk)});
@@ -768,7 +807,7 @@ function bindCommon(root){
   const foto=root.querySelector("#foto");if(foto)foto.onchange=async()=>{const f=foto.files[0];if(!f)return;try{toast("Subiendo foto…");const t=S.tickets.get(S.openTicket);const path=t._id+"/"+uid()+".jpg";const {error}=await sb.storage.from("fotos").upload(path,await shrink(f),{contentType:"image/jpeg"});if(error)throw error;await upd("tickets/"+t._id,{fotos:[...(t.fotos||[]),path]},"Foto agregada");setTimeout(()=>openTicket(t._id),400)}catch(e){toast("No se pudo subir la foto")}};
   const fe=root.querySelector("#fotoEstado");if(fe)fe.onchange=async()=>{const f=fe.files[0];if(!f)return;try{toast("Subiendo foto…");const t=S.tickets.get(S.openTicket);const path=t._id+"/estado-"+uid()+".jpg";const {error}=await sb.storage.from("fotos").upload(path,await shrink(f),{contentType:"image/jpeg"});if(error)throw error;await upd("tickets/"+t._id,{fotoEstado:path},"Página de estado guardada");S.tickets.set(t._id,{...t,fotoEstado:path});setTimeout(()=>openTicket(t._id),300)}catch(e){toast("No se pudo subir la foto")}};
   const ns=root.querySelector("#tk_scan");if(ns)ns.onchange=async()=>{const r=ns.files[0]&&await escanearSerie(ns.files[0]);if(!r)return;const q=root.querySelector("#eqq");q.value=r.serie;q.dispatchEvent(new Event("input"));
-    if(r.equipo){const e=r.equipo;root.querySelector("#tk_eq").value=e._id;root.querySelector("#tk_cli").value=e.clienteId;root.querySelector("#tk_sel").innerHTML=`<b>${esc(e.cliente)}</b> · ${esc(e.modelo)} · ${esc(e.ubicacion)}`;root.querySelector("#eqres").innerHTML="";toast("Equipo encontrado: "+e.modelo)}else toast("Serie "+r.serie+": no está en la base de equipos")};
+    if(r.equipo){tkElegir(root,r.equipo);root.querySelector("#eqres").innerHTML="";toast("Equipo encontrado: "+r.equipo.modelo+" · "+r.equipo.cliente)}else toast("Serie "+r.serie+": no está en la base de equipos")};
   root.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>A[b.dataset.a]&&A[b.dataset.a](b.dataset.id,root));
 }
 function shrink(file){return new Promise(res=>{const img=new Image();img.onload=()=>{const s=Math.min(1,1600/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=img.width*s;c.height=img.height*s;c.getContext("2d").drawImage(img,0,0,c.width,c.height);c.toBlob(b=>res(b||file),"image/jpeg",.82)};img.onerror=()=>res(file);img.src=URL.createObjectURL(file)})}
@@ -799,6 +838,12 @@ const A={
  async delTk(id){const t=S.tickets.get(id);if(!t||!confirm("¿Eliminar el ticket "+t.folio+"? No se puede deshacer."))return;
   try{await db.doc("tickets/"+id).del();S.tickets.delete(id);closeDr();toast("Ticket "+t.folio+" eliminado");render()}catch(e){onWriteErr(e)}},
  pdfTk:id=>pdfTicket(S.tickets.get(id)),
+ async saveContrato(id,L){const c=S.clientes.get(id);const k={};L.querySelectorAll("[data-ct]").forEach(el=>k[el.dataset.ct]=el.type==="number"?(el.value===""?"":+el.value):el.value);if(!k.vence&&k.inicio)k.vence=sumaMeses(k.inicio,k.plazo);
+  if(await upd("clientes/"+id,{contrato:k},"Contrato guardado")){S.clientes.set(id,{...c,contrato:k});openCliente(id,"contrato")}},
+ async saveDocs(id,L){const c=S.clientes.get(id);const docs={},alta={};const hoy=new Date(Date.now()+TZ).toISOString().slice(0,10);
+  L.querySelectorAll("[data-dk]").forEach(el=>{const i=el.dataset.dk;docs[i]={ok:el.checked,f:L.querySelector(`[data-dkf="${i}"]`).value||(el.checked?hoy:""),n:L.querySelector(`[data-dkn="${i}"]`).value.trim()}});
+  L.querySelectorAll("[data-al]").forEach(el=>{const k=el.dataset.al;alta[k]={ok:el.checked,f:L.querySelector(`[data-alf="${k}"]`).value||(el.checked?hoy:"")}});
+  if(await upd("clientes/"+id,{docs,alta},"Guardado")){S.clientes.set(id,{...c,docs,alta});openCliente(id,"docs")}},
  async saveCli(id,L){const ch={};L.querySelectorAll("[data-cf]").forEach(el=>ch[el.dataset.cf]=el.value);if(await upd("clientes/"+id,ch,"Cliente guardado"))setTimeout(()=>openCliente(id,"datos"),300)},
  async addCont(id,L){const k={nombre:val(L,"#kn"),cargo:val(L,"#kc"),tel:val(L,"#kt"),correo:val(L,"#ke")};if(!k.nombre){toast("Escribe el nombre");return}const c=S.clientes.get(id);if(await upd("clientes/"+id,{contactos:[...(c.contactos||[]),k]},"Contacto agregado"))setTimeout(()=>openCliente(id,"contactos"),300)},
  async saveEq(id,L){const e=S.equipos.get(id);const ch={};L.querySelectorAll("[data-ef]").forEach(el=>ch[el.dataset.ef]=el.value);ch.ultPrev=ch.ultPrev?new Date(ch.ultPrev+"T12:00:00").getTime():null;ch.kfs=ch.kfs||null;
@@ -808,6 +853,10 @@ const A={
  async addBitacora(id,L){const e=S.equipos.get(id);const x=val(L,"#be_x");if(!x){toast("Describe qué pasó");return}const f=val(L,"#be_f");
   const b=[...(e.bitacora||[]),{t:f?new Date(f+"T12:00:00").getTime():Date.now(),tipo:val(L,"#be_t"),txt:x,por:S.me?.id||""}];if(await upd("equipos/"+id,{bitacora:b},"Agregado al historial")){S.equipos.set(id,{...e,bitacora:b});openEquipo(id)}},
  pdfHistEq:id=>pdfHistorialEq(S.equipos.get(id)),
+ async eqAVenta(id){const e=S.equipos.get(id);const ya=[...S.venta.values()].find(a=>a.equipoId===id);if(ya){location.hash="venta";setTimeout(()=>vFicha(ya._id),200);return}
+  const nid=uid();const a={codigo:vSiguiente(),tipo:"Multifuncional",marca:e.marca||"",modelo:e.modelo||"",estado:"Seminuevo",contador:e.ultContador?.total||"",specs:e.color?"Color":"B/N",cantidad:1,estatus:"borrador",fotos:[],pub:{},ventas:[],equipoId:id,
+   notas:`Serie ${e.serie}. Retirado de ${e.cliente||"cliente"}${e.ubicacion?" ("+e.ubicacion+")":""}. Revisar estado y poner precio.`,entrega:"Tlalnepantla, Edo. de México",creado:Date.now(),por:S.me?.id||""};
+  if(await save("venta/"+nid,a,"Artículo "+a.codigo+" creado en Venta")){S.venta.set(nid,{...a,_id:nid});const b=[...(e.bitacora||[]),{t:Date.now(),tipo:"Nota",txt:"Pasado a Venta como "+a.codigo,por:S.me?.id||""}];upd("equipos/"+id,{bitacora:b});location.hash="venta";setTimeout(()=>vFicha(nid),250)}},
  nuevoCliente(){drawer(`<button class="btn sm x" data-close>Cerrar</button><h2>Nuevo cliente</h2><div class="panel" style="margin-top:14px"><div class="form"><label class="fl full">Razón social<input class="f" id="nc_n"></label><label class="fl">RFC<input class="f" id="nc_r"></label><label class="fl">Municipio<input class="f" id="nc_m"></label><label class="fl">Estatus<select class="f" id="nc_e"><option>prospecto</option><option>activo</option></select></label></div><div class="row" style="margin-top:12px"><button class="btn pri" data-a="crearCli">Crear cliente</button></div></div>`,L=>bindCommon(L))},
  async crearCli(_,L){const n=val(L,"#nc_n");if(!n){toast("Escribe la razón social");return}const id=n.normalize("NFKD").replace(/[^\w]+/g,"-").toLowerCase().replace(/^-|-$/g,"").slice(0,50)+"-"+uid().slice(-4);
   if(await save("clientes/"+id,{nombre:n,rfc:val(L,"#nc_r"),municipio:val(L,"#nc_m"),estatus:val(L,"#nc_e"),contactos:[],equiposActivos:0,notas:""},"Cliente creado"))setTimeout(()=>openCliente(id,"datos"),400)},
@@ -1081,6 +1130,14 @@ function pEquipo(){
 }
 /* ---------- Ficha ---------- */
 let PD={c:"telefono",r:"",n:"",prox:"",est:""};
+const LEV=[["equipos","Equipos actuales (marca, modelo, antigüedad)","t"],["propios","¿Propios o rentados?","s:Propios|Rentados|Mixto"],["proveedor","Proveedor actual","t"],["vence","Vencimiento de su contrato actual","d"],
+ ["bn","Páginas B/N al mes","n"],["color","Páginas color al mes","n"],["papel","Tamaño de papel","s:Carta / oficio|Doble carta|Ambos"],["cajas","Cajas de papel que compran al mes","n"],
+ ["funciones","Escaneo, fax, engrapado","t"],["usuarios","Usuarios que imprimen","n"],["sedes","Pisos o sucursales","t"],["red","¿Tienen nodo de red?","s:Sí|No|No sabe"],["segura","¿Impresión controlada o segura (PIN)?","s:Sí|No|Le interesa"],
+ ["gasto","Gasto mensual actual (renta, tóner, reparaciones)","n"],["problemas","Problemas que tienen hoy","t"],["decide","Quién decide","t"],["cuando","Fecha en que lo necesitan","d"],["computo","¿Interés en renta de laptops?","s:No|Sí|Más adelante"]];
+function levHTML(v){v=v||{};return LEV.map(([k,l,t])=>{const val=esc(v[k]??"");if(t==="t")return `<label class="fl${["equipos","problemas"].includes(k)?" full":""}">${l}<input class="f" data-lev="${k}" value="${val}"></label>`;
+  if(t==="n")return `<label class="fl">${l}<input class="f" type="number" data-lev="${k}" value="${val}"></label>`;if(t==="d")return `<label class="fl">${l}<input class="f" type="date" data-lev="${k}" value="${val}"></label>`;
+  return `<label class="fl">${l}<select class="f" data-lev="${k}"><option value="">—</option>${t.slice(2).split("|").map(o=>`<option ${v[k]===o?"selected":""}>${o}</option>`).join("")}</select></label>`}).join("")}
+const levResumen=v=>LEV.filter(([k])=>v&&v[k]!==undefined&&v[k]!=="").map(([k,l])=>l+": "+v[k]).join("\n");
 async function openProsp(id,focus){let l;try{l=await rpc("prosp_ficha",{p_id:id})}catch(e){return}if(!l){toast("No existe la empresa");return}
   if(!PR.fichaId||PR.fichaId!==id)PD={c:telP(l)?"telefono":"email",r:"",n:"",prox:"",est:""};PR.fichaId=id;PR.ficha=l;fichaP(focus)}
 function sugEst(cur,res){const st=RESP_ST[res];if(!st)return cur;if(TERMP.has(st))return st;if(TERMP.has(cur))return RANKP[st]>=2?st:cur;return RANKP[st]>RANKP[cur]?st:cur}
@@ -1109,6 +1166,8 @@ function fichaP(focus){
    <div class="panel" style="margin-top:14px"><h2>Persona de contacto</h2><div class="form"><label class="fl">Nombre<input class="f" id="px_n" value="${esc(x.contacto||"")}"></label><label class="fl">Cargo<input class="f" id="px_c" value="${esc(x.cargo||"")}"></label>
     <label class="fl">Teléfono directo<input class="f" id="px_t" value="${esc(x.tel||"")}"></label><label class="fl">Correo directo<input class="f" id="px_e" type="email" value="${esc(x.email||"")}"></label>
     <label class="fl full">Notas generales<textarea class="f" id="px_notas">${esc(l.notas||"")}</textarea></label></div><div class="row" style="margin-top:10px"><button class="btn sm" data-a="guardarDatos">Guardar datos</button></div></div>
+   <div class="panel" style="margin-top:14px"><h2>Levantamiento de necesidades <span class="muted sm">${LEV.filter(([k])=>(x.lev||{})[k]!==undefined&&(x.lev||{})[k]!=="").length} de ${LEV.length} datos</span></h2><p class="muted sm" style="margin-top:0">Lo que hace falta para cotizar en un día. Si no saben cuántas páginas imprimen, pregunta cuántas cajas de papel compran al mes.</p>
+    <div class="form">${levHTML(x.lev)}</div><div class="row" style="margin-top:10px"><button class="btn sm pri" data-a="guardarLev">Guardar levantamiento</button></div></div>
    <div class="panel" style="margin-top:14px"><h2>Historial <span class="muted sm">${(l.acts||[]).length} registros</span></h2>${(l.acts||[]).map(a=>`<div class="pev">${cdot(a.canal)}<div><div class="sm b">${esc((CANP[a.canal]||[,a.canal])[1])} · ${esc(RESP_L[a.resultado]||a.resultado)} <span class="muted" style="font-weight:400">· ${fdt(new Date(a.fecha).getTime())} · ${esc(nombreP(a.persona))}</span></div>${a.campana?`<div class="muted sm">Campaña: ${esc(a.campana)}</div>`:""}${a.nota?`<div class="sm" style="white-space:pre-wrap">${esc(a.nota)}</div>`:""}</div></div>`).join("")||`<div class="muted sm">Sin contactos registrados todavía.</div>`}</div>`,L=>{bindCommon(L);bindFicha(L)});
   if(focus){const p=$("#pact");p&&p.scrollIntoView({block:"start"});$("#pd_res")?.focus()}
 }
@@ -1128,13 +1187,15 @@ Object.assign(A,{
  async registrar(_,L){syncPD(L);const l=PR.ficha;if(!PD.r){toast("Elige el resultado del contacto");return}
   try{const nl=await rpc("prosp_registrar",{p_id:l.id,p_canal:PD.c,p_resultado:PD.r,p_nota:PD.n.trim(),p_estado:L.querySelector("#pd_est").value,p_prox:PD.prox||null});
    toast("Contacto guardado");PD={c:PD.c,r:"",n:"",prox:"",est:""};pflush("hoy","list","res","cola");render();if(nl.estado!==l.estado)syncOpp(nl);openProsp(l.id)}catch(e){}},
- async guardarDatos(_,L){const l=PR.ficha;const c={contacto:val(L,"#px_n"),cargo:val(L,"#px_c"),tel:val(L,"#px_t"),email:val(L,"#px_e")};
+ async guardarLev(_,L){const l=PR.ficha;const lev={};L.querySelectorAll("[data-lev]").forEach(el=>{if(el.value!=="")lev[el.dataset.lev]=el.type==="number"?+el.value:el.value});
+  try{PR.ficha={...PR.ficha,...await rpc("prosp_actualizar",{p_id:l.id,p:{contacto:{...(l.contacto||{}),lev}}})};toast("Levantamiento guardado");pflush("list");render()}catch(e){}},
+ async guardarDatos(_,L){const l=PR.ficha;const c={...(l.contacto||{}),contacto:val(L,"#px_n"),cargo:val(L,"#px_c"),tel:val(L,"#px_t"),email:val(L,"#px_e")};
   try{PR.ficha={...PR.ficha,...await rpc("prosp_actualizar",{p_id:l.id,p:{contacto:c,notas:L.querySelector("#px_notas").value}})};toast("Datos guardados");pflush("list","hoy");render()}catch(e){}},
  cotizar(t){const l=PR.ficha;t=t||"cotizacion";
   cotForm(null,t,{tipo:t,fecha:Date.now(),estado:"borrador",plazo:24,estadoEq:"seminuevo",formato:"A3",duplex:true,color:true,marcas:{},partidas:[{cant:1,desc:"",precio:""}],empresa:l.razon||l.empresa,atencion:l.contacto?.contacto||""})},
  async aCliente(){const l=PR.ficha;const ex=[...S.clientes.values()].find(c=>c.nombre.toLowerCase()===(l.razon||l.empresa).toLowerCase());if(ex){openCliente(ex._id,"datos");return}
   if(!confirm("¿Dar de alta a "+l.empresa+" como cliente?"))return;const n=l.razon||l.empresa;const id=n.normalize("NFKD").replace(/[^\w]+/g,"-").toLowerCase().replace(/^-|-$/g,"").slice(0,50)+"-"+uid().slice(-4);const x=l.contacto||{};
-  if(await save("clientes/"+id,{nombre:n,rfc:"",municipio:l.mun||"",telefono:telP(l),correo:mailP(l),estatus:"activo",equiposActivos:0,responsable:l.resp||"",notas:"Desde Prospectos ("+l.id+")",contactos:x.contacto?[{nombre:x.contacto,cargo:x.cargo||"",tel:x.tel||telP(l),correo:x.email||mailP(l)}]:[]},"Cliente creado")){
+  if(await save("clientes/"+id,{nombre:n,rfc:"",municipio:l.mun||"",telefono:telP(l),correo:mailP(l),estatus:"activo",equiposActivos:0,responsable:l.resp||"",notas:"Desde Prospectos ("+l.id+")"+(x.lev?"\n\nLevantamiento:\n"+levResumen(x.lev):""),levantamiento:x.lev||null,contactos:x.contacto?[{nombre:x.contacto,cargo:x.cargo||"",tel:x.tel||telP(l),correo:x.email||mailP(l)}]:[]},"Cliente creado")){
    if(l.estado!=="ganado"){try{await rpc("prosp_actualizar",{p_id:l.id,p:{estado:"ganado"}});syncOpp({...l,estado:"ganado"})}catch(e){}}pflush();setTimeout(()=>openCliente(id,"datos"),400)}},
  async tomar(){const me=S.me.id,H=PR.cache["hoy:"+me];const n=Math.min(Math.max(metaDiaP(me)-(H?.hechos.length||0)-(H?.nnuevos||0),1),PR.cache["cola:"+PR.cola]||0);
   try{const k=await rpc("prosp_cola",{p_cola:PR.cola,p_tel:true,p_tomar:n});toast(k+" empresas asignadas a ti");pflush("hoy","cola","list")}catch(e){}render()},
@@ -1419,6 +1480,8 @@ const PLANT_DEF={
   sitio:["Lectura de contador final","Fotos del estado del equipo","Retirar accesorios y cables","Borrar libreta de direcciones y datos del cliente","Firma del cliente"]},
  "Entrega de tóner":{antes:["Vale de salida de tóner impreso","Tóner correcto según modelo y serie"],
   sitio:["Verificar modelo y serie del equipo","Instalar el tóner si lo solicita","Recoger tóner vacío y residual","Firma del vale de entrega"]},
+ "Soporte remoto":{antes:["Historial del equipo y última página de estado","Datos de contacto del usuario"],sitio:["Identificar la falla con el usuario (atasco, mensaje en pantalla, conexión)","Guiar la solución por teléfono o WhatsApp","Confirmar que el equipo imprime, copia y escanea","Si no se resuelve, programar visita en sitio"]},
+ "Toma de lectura":{antes:["Lista de equipos del cliente sin monitoreo KFS"],sitio:["Imprimir la página de estado de cada equipo","Foto de la página de estado","Anotar contador total (B/N y color)","Revisar nivel de tóner y dejar repuesto si hace falta"]},
  "Cambio de equipo":{antes:["Equipo nuevo probado en taller con tóner","Cables de corriente y de red","Drivers del modelo","Orden de cambio autorizada","Material de embalaje"],
   sitio:["Lectura de contador final del equipo retirado","Borrar datos del cliente del equipo retirado","Instalar y conectar el equipo nuevo","Configurar escaneo y drivers","Registrar contador inicial del equipo nuevo","Capacitación básica","Firma del cliente"]}};
 const plantilla=tipo=>{const d=S.plantillas.get(tipo)||{};const def=PLANT_DEF[tipo]||PLANT_DEF.Correctivo;return{antes:d.antes||def.antes,sitio:d.sitio||def.sitio}};
