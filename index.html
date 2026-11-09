@@ -163,7 +163,7 @@ canvas.sig{width:100%;height:170px;background:#fff;border:1px dashed var(--muted
 <body>
 <div class="app" id="app">
   <aside>
-    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.15 · 6 nov</span></small></div></div>
+    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.16 · 9 nov</span></small></div></div>
     <nav id="nav"></nav>
     <div class="who" id="who">Conectando…</div>
   </aside>
@@ -490,10 +490,25 @@ function vToner(){
   return header("Tóner y consumibles",`${SOL.filter(s=>s.estado!=="entregado").length} solicitudes abiertas · ${bajo.length} artículos con stock bajo.`,canW()?`<button class="btn pri" data-a="nuevaSol">+ Nueva solicitud</button><button class="btn" data-a="nuevoInv">Agregar artículo</button>`:"")+
   `<div class="tabs">${[["sol","Solicitudes"],["inv","Inventario"],["cat","Catálogo impresora → tóner"]].map(([k,n])=>`<button class="${tab===k?"on":""}" data-tab="${k}">${n}</button>`).join("")}</div>`+body;
 }
+/* ---------- historial de oportunidades ---------- */
+const OPCAN=[["llamada","Llamada"],["whatsapp","WhatsApp"],["correo","Correo"],["visita","Visita / reunión"],["linkedin","LinkedIn"],["nota","Nota interna"]];
+const OPCANN=Object.fromEntries(OPCAN);
+const etN=k=>(ETAPAS.find(x=>x[0]===k)||[k,k])[1];
+const histOpp=o=>{const h=[...(o.hist||[])];if(!h.some(x=>x.ev==="Oportunidad creada")&&o.creado)h.unshift({t:o.creado,por:o.resp||"",ev:"Oportunidad creada"});return h.sort((a,b)=>a.t-b.t)};
+const ultAvance=o=>Math.max(o.creado||0,o.mov||0,...(o.hist||[]).map(x=>x.t||0));
+const hEv=(ev,extra={})=>({t:Date.now(),por:S.me?.id||"",ev,...extra});
+function histHtml(h){return h.length?h.slice().reverse().map(x=>`<div style="border-top:1px solid var(--line);padding:8px 0"><div class="sm"><b>${esc(fdt(x.t))}</b> · ${esc(nombreP(x.por)||"")}${x.c?` · <span class="chip">${esc(OPCANN[x.c]||x.c)}</span>`:""}</div>${x.txt?`<div style="margin-top:3px;white-space:pre-wrap">${esc(x.txt)}</div>`:""}${x.ev?`<div class="muted sm" style="margin-top:2px">${esc(x.ev)}</div>`:""}</div>`).join(""):`<p class="muted sm" style="margin:0">Aún no hay avances registrados.</p>`}
+function actividadOpp(){const f=S.filters.opa||{};const dias=+(f.d||7);const desde=Date.now()-dias*864e5;
+  let L=[];S.opps.forEach(o=>histOpp(o).forEach(x=>{if(x.t>=desde)L.push({...x,o})}));if(f.p)L=L.filter(x=>x.por===f.p);L.sort((a,b)=>b.t-a.t);
+  const pers=[...new Set([...S.opps.values()].flatMap(o=>histOpp(o).map(x=>x.por)).filter(Boolean))];
+  const porP={};L.forEach(x=>{if(x.c)porP[x.por]=(porP[x.por]||0)+1});
+  return `<div class="panel" style="margin-top:16px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Actividad del equipo</h2><div class="row"><select class="f" data-f="opa.p"><option value="">Todas las personas</option>${pers.map(p=>`<option value="${esc(p)}" ${f.p===p?"selected":""}>${esc(nombreP(p))}</option>`).join("")}</select><select class="f" data-f="opa.d">${[["1","Hoy y ayer"],["7","Últimos 7 días"],["30","Últimos 30 días"]].map(([v,n])=>`<option value="${v}" ${String(dias)===v?"selected":""}>${n}</option>`).join("")}</select></div></div>
+   <p class="muted sm">${Object.keys(porP).length?Object.entries(porP).map(([p,n])=>`${esc(nombreP(p))}: <b>${n}</b> contacto${n===1?"":"s"}`).join(" · "):"Sin contactos registrados en este periodo."} Las llamadas en frío de Prospectos se ven en Prospectos → Resultados.</p>
+   ${L.slice(0,120).map(x=>`<div class="click" data-opp="${esc(x.o._id)}" style="border-top:1px solid var(--line);padding:8px 0;cursor:pointer"><div class="sm"><b>${esc(fdt(x.t))}</b> · ${esc(nombreP(x.por)||"")} · <b>${esc(x.o.empresa)}</b>${x.c?` · <span class="chip">${esc(OPCANN[x.c]||x.c)}</span>`:""}</div>${x.txt?`<div class="sm" style="margin-top:2px">${esc(x.txt)}</div>`:""}${x.ev?`<div class="muted sm">${esc(x.ev)}</div>`:""}</div>`).join("")||`<p class="muted sm" style="margin:0">Nada en este periodo.</p>`}</div>`}
 function vComercial(){
   const O=[...S.opps.values()];
   return header("Embudo comercial",`${O.filter(o=>!["ganado","perdido"].includes(o.etapa)).length} oportunidades abiertas. Las empresas de Prospectos llegan aquí solas al pasar a cita o propuesta.`,`${canW()?`<button class="btn pri" data-a="nuevaOpp">+ Nueva oportunidad</button>`:""}<a class="btn" href="#prospectos">Ir a Prospectos</a>`)+
-  `<div class="board" data-board="opp">${ETAPAS.map(([k,n])=>{const it=O.filter(o=>o.etapa===k);const v=it.reduce((s,o)=>s+(+o.valor||0),0);return `<div class="col" data-col="${k}"><h3>${n}<span>${it.length}${v?" · "+money(v):""}</span></h3>${it.map(o=>`<div class="card" draggable="true" data-opp="${esc(o._id)}"><div class="t">${esc(o.empresa)}</div><div class="muted sm">${esc(o.tipo||"")}${o.equipos?" · "+esc(o.equipos)+" equipos":""}</div>${o.valor?`<div class="b">${money(o.valor)}/mes</div>`:""}${o.prox?`<div class="sm ${o.prox<Date.now()?"":"muted"}" style="${o.prox<Date.now()?"color:var(--bad)":""}">Seguimiento ${fd(o.prox)}</div>`:""}</div>`).join("")}</div>`}).join("")}</div>`;
+  `<div class="board" data-board="opp">${ETAPAS.map(([k,n])=>{const it=O.filter(o=>o.etapa===k);const v=it.reduce((s,o)=>s+(+o.valor||0),0);return `<div class="col" data-col="${k}"><h3>${n}<span>${it.length}${v?" · "+money(v):""}</span></h3>${it.map(o=>`<div class="card" draggable="true" data-opp="${esc(o._id)}"><div class="t">${esc(o.empresa)}</div><div class="muted sm">${esc(o.tipo||"")}${o.equipos?" · "+esc(o.equipos)+" equipos":""}</div>${o.valor?`<div class="b">${money(o.valor)}/mes</div>`:""}${o.prox?`<div class="sm ${o.prox<Date.now()?"":"muted"}" style="${o.prox<Date.now()?"color:var(--bad)":""}">Seguimiento ${fd(o.prox)}</div>`:""}${(()=>{if(["ganado","perdido"].includes(o.etapa))return"";const d=Math.floor((Date.now()-ultAvance(o))/864e5);return d>=15?`<div class="sm b" style="color:var(--bad)">Sin avance ${d} días</div>`:d>=1?`<div class="muted sm">Último avance hace ${d} día${d===1?"":"s"}</div>`:`<div class="muted sm">Avance hoy</div>`})()}</div>`).join("")}</div>`}).join("")}</div>`+actividadOpp();
 }
 /* ===================== contrato de arrendamiento (Word) ===================== */
 const NUM_LETRA=n=>{n=+n;const u=["CERO","UN","DOS","TRES","CUATRO","CINCO","SEIS","SIETE","OCHO","NUEVE","DIEZ","ONCE","DOCE","TRECE","CATORCE","QUINCE","DIECISÉIS","DIECISIETE","DIECIOCHO","DIECINUEVE","VEINTE","VEINTIÚN","VEINTIDÓS","VEINTITRÉS","VEINTICUATRO","VEINTICINCO","VEINTISÉIS","VEINTISIETE","VEINTIOCHO","VEINTINUEVE"];
@@ -1290,7 +1305,7 @@ function bindView(v){const m=$("#main");bindCommon(m);if(v==="mensajes")bindMens
     bd.querySelectorAll(".card[draggable=true]").forEach(c=>c.addEventListener("dragstart",e=>{dragId=c.dataset.tk||c.dataset.opp;e.dataTransfer.setData("text/plain",dragId)}));
     bd.querySelectorAll(".col").forEach(col=>{col.addEventListener("dragover",e=>{e.preventDefault();col.classList.add("drop")});col.addEventListener("dragleave",()=>col.classList.remove("drop"));
      col.addEventListener("drop",async e=>{e.preventDefault();col.classList.remove("drop");const id=e.dataTransfer.getData("text/plain");const k=col.dataset.col;
-      if(mode==="opp"){const o=S.opps.get(id);if(o&&o.etapa!==k)upd("oportunidades/"+id,{etapa:k,mov:Date.now()},"Movida a "+ETAPAS.find(x=>x[0]===k)[1])}
+      if(mode==="opp"){const o=S.opps.get(id);if(o&&o.etapa!==k)upd("oportunidades/"+id,{etapa:k,mov:Date.now(),hist:[...(o.hist||[]),hEv("Etapa: "+etN(o.etapa)+" → "+etN(k))].slice(-300)},"Movida a "+ETAPAS.find(x=>x[0]===k)[1])}
       else{const t=S.tickets.get(id);if(!t)return;let ch;if(mode==="estado"){if(t.estado===k)return;ch=stPatch(t,k)}else{if(t.tecnicoId===k)return;ch={tecnicoId:k,estado:k&&t.estado==="abierto"?"asignado":t.estado};ch.hist=[...(t.hist||[]),{t:Date.now(),ev:k?"Asignado a "+nombreDe(k):"Sin asignar",por:S.me?.id||""}]}upd("tickets/"+id,ch,"Ticket actualizado")}})})});
   if(v==="config"){m.querySelectorAll("[data-urol]").forEach(s=>s.onchange=()=>{const id=s.dataset.urol;setUsuarios({...S.usuarios,[id]:{...S.usuarios[id],rol:s.value}})});
     m.querySelectorAll("[data-ualias]").forEach(s=>s.onchange=()=>{const id=s.dataset.ualias;setUsuarios({...S.usuarios,[id]:{...S.usuarios[id],alias:s.value}})});
@@ -1395,7 +1410,15 @@ const A={
  async saveInv(id,L){const d={item:val(L,"#iv_i"),tipo:val(L,"#iv_t"),cant:+val(L,"#iv_c")||0,min:+val(L,"#iv_m")||0};if(!d.item){toast("Escribe el artículo");return}if(await save("inventario/"+(id||uid()),d,"Inventario guardado"))closeDr()},
  nuevaOpp:()=>oppForm(),
  async saveOpp(id,L){const d={empresa:val(L,"#op_e"),contacto:val(L,"#op_c"),tel:val(L,"#op_t"),tipo:val(L,"#op_ti"),etapa:val(L,"#op_et"),valor:+val(L,"#op_v")||0,equipos:+val(L,"#op_q")||0,prox:val(L,"#op_p")?new Date(val(L,"#op_p")+"T12:00:00").getTime():null,notas:val(L,"#op_n"),resp:S.me?.id||""};
-  if(!d.empresa){toast("Escribe la empresa");return}const base={...(id?S.opps.get(id):{creado:Date.now()}),...d};delete base._id;if(await save("oportunidades/"+(id||uid()),base,"Oportunidad guardada"))closeDr()},
+  if(!d.empresa){toast("Escribe la empresa");return}const o0=id?S.opps.get(id):null;const base={...(o0||{creado:Date.now()}),...d};delete base._id;
+  if(o0)base.resp=o0.resp||d.resp;
+  const ev=[];if(!o0)ev.push(hEv("Oportunidad creada"+(d.notas?": "+d.notas:"")));else{if(o0.etapa!==d.etapa)ev.push(hEv("Etapa: "+etN(o0.etapa)+" → "+etN(d.etapa)));if((o0.prox||null)!==d.prox)ev.push(hEv("Próximo seguimiento: "+(d.prox?fd(d.prox):"sin fecha")));if((+o0.valor||0)!==d.valor)ev.push(hEv("Valor mensual: "+money(d.valor)));if((o0.notas||"")!==d.notas)ev.push(hEv("Notas generales editadas"))}
+  base.hist=[...(o0?.hist||[]),...ev].slice(-300);if(ev.length&&o0)base.mov=Date.now();
+  const nid=id||uid();if(await save("oportunidades/"+nid,base,"Oportunidad guardada")){S.opps.set(nid,{...base,_id:nid});o0?oppForm(nid):closeDr()}},
+ async oppAvance(id,L){const o=S.opps.get(id);if(!o)return;const txt=val(L,"#oa_t"),c=val(L,"#oa_c"),et=val(L,"#oa_e"),pr=val(L,"#oa_p");if(!txt){toast("Escribe qué pasó");return}
+  const prox=pr?new Date(pr+"T12:00:00").getTime():null;const e={t:Date.now(),por:S.me?.id||"",c,txt};const ex=[];if(et)ex.push("Etapa: "+etN(o.etapa)+" → "+etN(et));if((o.prox||null)!==prox)ex.push("Próximo seguimiento: "+(prox?fd(prox):"sin fecha"));if(ex.length)e.ev=ex.join(" · ");
+  const ch={hist:[...(o.hist||[]),e].slice(-300),mov:Date.now(),prox};if(et)ch.etapa=et;
+  if(await upd("oportunidades/"+id,ch,"Avance registrado")){Object.assign(o,ch);oppForm(id)}},
  addId(_,L){const id=val(L,"#usrid").toLowerCase();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(id)){toast("Escribe un correo válido");return}setUsuarios({...S.usuarios,[id]:{alias:val(L,"#usrn")||id.split("@")[0],rol:val(L,"#usrr")}})}
 };
 Object.assign(A,AM);Object.assign(A,AF);
@@ -1406,8 +1429,15 @@ function oppForm(id){const o=id?S.opps.get(id):{etapa:"nuevo"};drawer(`<button c
  <label class="fl">Etapa<select class="f" id="op_et">${ETAPAS.map(([k,n])=>`<option value="${k}" ${o.etapa===k?"selected":""}>${n}</option>`).join("")}</select></label>
  <label class="fl">Valor mensual estimado (MXN)<input class="f" id="op_v" type="number" value="${esc(o.valor||"")}"></label><label class="fl">Equipos estimados<input class="f" id="op_q" type="number" value="${esc(o.equipos||"")}"></label>
  <label class="fl">Próximo seguimiento<input class="f" id="op_p" type="date" value="${o.prox?new Date(o.prox).toISOString().slice(0,10):""}"></label><div></div>
- <label class="fl full">Notas<textarea class="f" id="op_n">${esc(o.notas||"")}</textarea></label></div>
- <div class="row" style="margin-top:12px">${canW()?`<button class="btn pri" data-a="saveOpp" data-id="${esc(id||"")}">Guardar</button>`:""}${o.tel?`<a class="btn wa" target="_blank" rel="noopener" href="${waLink(o.tel,"Hola "+(o.contacto||"")+", le escribe Office Automation.")}">WhatsApp</a>`:""}</div></div>`,L=>bindCommon(L))}
+ <label class="fl full">Notas generales (datos fijos de la empresa; los avances van abajo)<textarea class="f" id="op_n">${esc(o.notas||"")}</textarea></label></div>
+ <div class="row" style="margin-top:12px">${canW()?`<button class="btn pri" data-a="saveOpp" data-id="${esc(id||"")}">Guardar</button>`:""}${o.tel?`<a class="btn wa" target="_blank" rel="noopener" href="${waLink(o.tel,"Hola "+(o.contacto||"")+", le escribe Office Automation.")}">WhatsApp</a>`:""}</div></div>
+ ${id&&canW()?`<div class="panel" style="margin-top:14px"><h2>Registrar avance</h2><div class="form">
+  <label class="fl">Cómo fue el contacto<select class="f" id="oa_c">${OPCAN.map(([k,n])=>`<option value="${k}">${n}</option>`).join("")}</select></label>
+  <label class="fl">Cambiar etapa a<select class="f" id="oa_e"><option value="">(sin cambio · ${esc(etN(o.etapa))})</option>${ETAPAS.filter(([k])=>k!==o.etapa).map(([k,n])=>`<option value="${k}">${n}</option>`).join("")}</select></label>
+  <label class="fl full">¿Qué pasó?<textarea class="f" id="oa_t" placeholder="Ej. Hablé con Irving: pidió la documentación para el martes 10-nov."></textarea></label>
+  <label class="fl">Próximo seguimiento<input class="f" type="date" id="oa_p" value="${o.prox?new Date(o.prox).toISOString().slice(0,10):""}"></label></div>
+  <div class="row" style="margin-top:10px"><button class="btn pri" data-a="oppAvance" data-id="${esc(id)}">Registrar avance</button><span class="muted sm">Queda con fecha, hora y tu nombre; desde el sistema no se puede editar ni borrar.</span></div></div>`:""}
+ ${id?`<div class="panel" style="margin-top:14px"><h2>Historial <span class="muted sm">${histOpp(o).length} registros</span></h2>${histHtml(histOpp(o))}</div>`:""}`,L=>bindCommon(L))}
 
 /* ===================== cotizaciones ===================== */
 const COT_EST=["borrador","enviada","aceptada","rechazada"];
@@ -1715,7 +1745,8 @@ function bindFicha(L){const l=PR.ficha;
 async function syncOpp(l){ // integra con el embudo de Comercial cuando la empresa llega a diagnóstico o más
   if(RANKP[l.estado]<3&&!["perdido"].includes(l.estado))return;const id="p-"+l.id,o=S.opps.get(id);if(!o&&l.estado==="perdido")return;
   const etapa={diagnostico:"diagnostico",propuesta:"propuesta",ganado:"ganado",perdido:"perdido"}[l.estado];
-  const d={...(o||{creado:Date.now(),tipo:l.lista==="usados"?"Venta de seminuevo":"Renta de impresión",valor:0,equipos:0,notas:"Desde Prospectos"}),empresa:l.empresa,contacto:l.contacto?.contacto||o?.contacto||"",tel:telP(l),etapa,resp:l.resp||S.me.id,prospectoId:l.id,prox:l.prox?new Date(l.prox+"T12:00:00").getTime():o?.prox||null};delete d._id;
+  const d={...(o||{creado:Date.now(),tipo:l.lista==="usados"?"Venta de seminuevo":"Renta de impresión",valor:0,equipos:0,notas:"Desde Prospectos",hist:[{t:Date.now(),por:S.me?.id||"",ev:"Llegó desde Prospectos"}]}),empresa:l.empresa,contacto:l.contacto?.contacto||o?.contacto||"",tel:telP(l),etapa,resp:l.resp||S.me.id,prospectoId:l.id,prox:l.prox?new Date(l.prox+"T12:00:00").getTime():o?.prox||null};delete d._id;
+  if(o&&o.etapa!==etapa)d.hist=[...(o.hist||[]),{t:Date.now(),por:S.me?.id||"",ev:"Etapa desde Prospectos: "+etN(o.etapa)+" → "+etN(etapa)}].slice(-300);
   await save("oportunidades/"+id,d,o?null:"Pasó al embudo de Comercial")}
 Object.assign(A,{
  async registrar(_,L){syncPD(L);const l=PR.ficha;if(!PD.r){toast("Elige el resultado del contacto");return}
