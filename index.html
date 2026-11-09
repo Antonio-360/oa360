@@ -163,7 +163,7 @@ canvas.sig{width:100%;height:170px;background:#fff;border:1px dashed var(--muted
 <body>
 <div class="app" id="app">
   <aside>
-    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.14 · 5 nov</span></small></div></div>
+    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.15 · 6 nov</span></small></div></div>
     <nav id="nav"></nav>
     <div class="who" id="who">Conectando…</div>
   </aside>
@@ -1651,7 +1651,7 @@ function pEquipo(){
    ${(C.rutinas||[]).map((r,i)=>`<tr><td><select class="f" data-prp="${i}" ${dis}>${personasP().map(m=>`<option value="${esc(m.id)}" ${m.id===r.persona?"selected":""}>${esc(m.nombre)}</option>`).join("")}</select></td><td><input class="f" data-prt="${i}" value="${esc(r.texto)}" style="width:100%;min-width:220px" ${dis}></td>
     <td style="white-space:nowrap">${DIAS_P.map(([v,l])=>`<label class="sm" style="margin-right:5px"><input type="checkbox" data-prd="${i}" value="${v}" ${(r.dias||[]).map(Number).includes(v)?"checked":""} ${dis}>${l}</label>`).join("")}</td><td>${adm?`<button class="btn sm" data-prx="${i}">Quitar</button>`:""}</td></tr>`).join("")||`<tr><td colspan="4" class="empty">Sin rutinas.</td></tr>`}</table></div>
    ${adm?`<div class="row" style="margin-top:10px"><button class="btn" data-pa="addRutina">Añadir rutina</button><button class="btn pri" data-pa="guardarRutinas">Guardar rutinas</button></div>`:""}</div>
-  ${adm?`<div class="panel" style="margin-top:16px"><h2>Importar base de prospectos</h2><p class="muted sm" style="margin-top:0">Elige el archivo <b>OA360_prospectos_PRIVADO.json</b>. Solo agrega empresas nuevas: nunca borra ni pisa el seguimiento que ya exista. También carga el equipo, las metas y las rutinas del CRM anterior si aquí aún no hay.</p>
+  ${adm?`<div class="panel" style="margin-top:16px"><h2>Importar base de prospectos</h2><p class="muted sm" style="margin-top:0">Elige el archivo <b>OA360_prospectos_PRIVADO.json</b>. Solo agrega empresas nuevas y completa datos vacíos de las que ya existen: nunca borra ni pisa el seguimiento. También sirve para bases externas preparadas para OA 360 (como la de Bernardo). También carga el equipo, las metas y las rutinas del CRM anterior si aquí aún no hay.</p>
    <div class="row"><input type="file" id="pimp" accept=".json,application/json"><button class="btn pri" data-pa="importar">Importar</button></div><div class="muted sm" id="pimp_m" style="margin-top:8px"></div></div>`:""}
   <div class="panel" style="margin-top:16px"><h2>Cómo trabajar los prospectos</h2><ol class="sm" style="margin:0;padding-left:18px;line-height:1.7">
    <li>Toni trae los leads (Facebook, Marketplace, Mercado Libre, referidos) y hace el primer contacto; los da de alta con <b>+ Empresa</b>.</li>
@@ -1754,6 +1754,10 @@ Object.assign(A,{
  addRutina(){const r=[...rutinasDraft(),{id:uid(),persona:S.me.id,texto:"Nueva rutina",dias:[1,2,3,4,5]}];save("config/crm",{...crmCfg(),rutinas:r},"Rutina añadida")},
  guardarRutinas(){save("config/crm",{...crmCfg(),rutinas:rutinasDraft().filter(r=>r.texto.trim())},"Rutinas guardadas")},
  async importar(){const f=$("#pimp")?.files?.[0],m=$("#pimp_m");if(!f){toast("Elige el archivo");return}let d;try{d=JSON.parse(await f.text())}catch(e){toast("El archivo no es válido");return}
+  if(d.tipo==="oa360-fusion"&&Array.isArray(d.rows)){let nv=0,cp=0;const B=300;
+   for(let i=0;i<d.rows.length;i+=B){m.textContent=`Importando ${d.origen||"la base"}… ${fmt(Math.min(i+B,d.rows.length))} de ${fmt(d.rows.length)}`;
+    try{const r=await rpc("prosp_fusionar",{p_rows:d.rows.slice(i,i+B)});nv+=r.nuevas||0;cp+=r.completadas||0}catch(e){m.textContent="Se detuvo en la fila "+fmt(i)+". Vuelve a intentarlo: lo ya importado no se duplica.";return}}
+   m.textContent=`Listo: ${fmt(nv)} empresas nuevas (sin responsable) y ${fmt(cp)} que ya existían, solo con sus datos vacíos completados.`;pflush();toast("Base importada sin duplicados");return}
   if(d.tipo!=="oa360-prospectos"||!Array.isArray(d.rows)){toast("Este no es el archivo de prospectos de OA 360");return}
   let ok=0;const B=1000;for(let i=0;i<d.rows.length;i+=B){m.textContent=`Importando… ${fmt(Math.min(i+B,d.rows.length))} de ${fmt(d.rows.length)}`;try{ok+=await rpc("prosp_importar",{p_rows:d.rows.slice(i,i+B)})}catch(e){m.textContent="Se detuvo en la fila "+fmt(i)+". Vuelve a intentarlo: lo ya importado no se duplica.";return}}
   if(d.config&&!S.crm?.miembros)await save("config/crm",d.config);m.textContent=`Listo: ${fmt(ok)} empresas nuevas (${fmt(d.rows.length-ok)} ya existían).`;pflush();toast("Base importada")}
