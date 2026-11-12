@@ -163,7 +163,7 @@ canvas.sig{width:100%;height:170px;background:#fff;border:1px dashed var(--muted
 <body>
 <div class="app" id="app">
   <aside>
-    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.16 · 9 nov</span></small></div></div>
+    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.17 · 12 nov</span></small></div></div>
     <nav id="nav"></nav>
     <div class="who" id="who">Conectando…</div>
   </aside>
@@ -1085,11 +1085,13 @@ const facId=(cid,mes)=>cid+"__"+mes;
 function cobroCli(c){const k=c.contrato||{};return{
   esquema:c.esquema||ESQ_DE_CONTRATO[k.esquema]||"",
   precioBN:c.precioBN??k.bn??"",precioColor:c.precioColor??k.color??"",
-  rentaFija:c.rentaFija??k.renta??"",rentaEquipo:c.rentaEquipo??"",
+  rentaFija:c.rentaFija??k.renta??"",rentaEquipo:c.rentaEquipo??"",rentaGrande:c.rentaGrande??"",rentaChico:c.rentaChico??"",
   inclBN:c.inclBN??k.incluidas??"",inclColor:c.inclColor??"",
   tecnicoId:c.tecnicoId||"",vendedorId:c.vendedorId||"",fechaAlta:c.fechaAlta||k.inicio||""}}
 const eqsFac=cid=>[...S.equipos.values()].filter(e=>e.clienteId===cid&&["instalado","respaldo"].includes(e.estatus)).sort((a,b)=>(a.ubicacion||"").localeCompare(b.ubicacion||""));
 /* Cálculo por esquema. lineas: [{equipoId,iniBN,finBN,iniColor,finColor}] */
+/* Renta de un equipo: la suya propia, o la del tamaño elegido (grande / chico), o la renta por equipo general del cliente */
+const rentaDeEq=(e,p)=>e.renta!==undefined&&e.renta!==null&&e.renta!==""?num(e.renta):e.tamRenta==="grande"?num(p.rentaGrande):e.tamRenta==="chico"?num(p.rentaChico):num(p.rentaEquipo);
 function calcFac(c,lineas){const p=cobroCli(c);let bn=0,co=0;
   (lineas||[]).forEach(l=>{bn+=Math.max(0,num(l.finBN)-num(l.iniBN));co+=Math.max(0,num(l.finColor)-num(l.iniColor))});
   if(!p.esquema)return{sinEsquema:true,bn,co,cBN:0,cCo:0,renta:0,impBN:0,impCo:0,impresion:0,subtotal:0,iva:0,total:0,esquema:""};
@@ -1097,7 +1099,7 @@ function calcFac(c,lineas){const p=cobroCli(c);let bn=0,co=0;
   if(p.esquema==="renta_clic"){
     // Renta de cada equipo (la suya o la «renta por equipo» del cliente). Si ninguno tiene renta, la renta total del contrato una sola vez.
     const E=(lineas||[]).map(l=>S.equipos.get(l.equipoId)||{});const propia=e=>e.renta!==undefined&&e.renta!==null&&e.renta!=="";
-    renta=E.length&&(E.some(propia)||num(p.rentaEquipo)>0)?E.reduce((t,e)=>t+(propia(e)?num(e.renta):num(p.rentaEquipo)),0):num(p.rentaFija)}
+    renta=E.length&&E.some(e=>rentaDeEq(e,p)>0)?E.reduce((t,e)=>t+rentaDeEq(e,p),0):num(p.rentaFija)}
   else if(p.esquema==="renta_volumen")renta=num(p.rentaFija);
   const cBN=p.esquema==="renta_volumen"?Math.max(0,bn-num(p.inclBN)):bn,cCo=p.esquema==="renta_volumen"?Math.max(0,co-num(p.inclColor)):co;
   const impBN=cBN*num(p.precioBN),impCo=cCo*num(p.precioColor);const sub=Math.round((renta+impBN+impCo)*100)/100;const iva=Math.round(sub*IVA*100)/100;
@@ -1167,8 +1169,9 @@ function cobroTab(c,id){const p=cobroCli(c);const dis=canW()?"":"disabled";const
   const n=(k,l,step="0.01")=>`<label class="fl">${l}<input class="f" type="number" step="${step}" data-cb="${k}" value="${esc(p[k])}" ${dis}></label>`;
   return `<div class="panel"><h2>Cómo se le cobra</h2><div class="form">
    <label class="fl">Esquema<select class="f" data-cb="esquema" ${dis}><option value="">Sin esquema (elige uno)</option>${Object.entries(ESQUEMAS).map(([k,v])=>`<option value="${k}" ${p.esquema===k?"selected":""}>${v}</option>`).join("")}</select></label>
-   ${n("rentaFija","Renta fija o total del contrato (sin IVA)")}${n("rentaEquipo","Renta por equipo (sin IVA)")}${n("precioBN","Precio por página B/N")}${n("precioColor","Precio por página color")}${n("inclBN","Páginas B/N incluidas","1")}${n("inclColor","Páginas color incluidas","1")}</div>
-   <p class="muted sm"><b>Renta + impresión:</b> se suma la renta de cada equipo (la de su ficha o la «renta por equipo»); si ningún equipo tiene renta, se cobra una sola vez la renta fija o total del contrato. Más todas las páginas. <b>Renta con volumen:</b> solo la renta fija, más las páginas arriba de las incluidas (la renta de los equipos no se suma). <b>Solo impresión:</b> sin renta.</p></div>
+   ${n("rentaFija","Renta fija o total del contrato (sin IVA)")}${n("rentaEquipo","Renta por equipo general (sin IVA)")}${n("rentaGrande","Renta por equipo grande (sin IVA)")}${n("rentaChico","Renta por equipo chico (sin IVA)")}${n("precioBN","Precio por página B/N")}${n("precioColor","Precio por página color")}${n("inclBN","Páginas B/N incluidas","1")}${n("inclColor","Páginas color incluidas","1")}</div>
+   ${(()=>{const E=eqsFac(id);return E.length?`<div class="muted sm b" style="margin:14px 0 6px">Renta de cada equipo</div><div class="wrap"><table class="tbl sm"><tr><th>Equipo</th><th>Ubicación</th><th>Renta que se le cobra</th><th>Monto propio</th></tr>${E.map(e=>{const pr=e.renta!==undefined&&e.renta!==null&&e.renta!=="";const v=pr?"propia":(e.tamRenta||"");return `<tr data-req="${esc(e._id)}"><td><b>${esc(e.modelo||"")}</b><div class="muted">${esc(e.serie||e._id)}</div></td><td>${esc(e.ubicacion||"")}</td><td><select class="f" data-rk="tam" ${dis}><option value="" ${v===""?"selected":""}>General</option><option value="grande" ${v==="grande"?"selected":""}>Equipo grande</option><option value="chico" ${v==="chico"?"selected":""}>Equipo chico</option><option value="propia" ${v==="propia"?"selected":""}>Monto propio</option></select></td><td><input class="f" type="number" step="0.01" data-rk="monto" value="${esc(pr?e.renta:"")}" placeholder="—" style="width:110px" ${dis}></td></tr>`}).join("")}</table></div>`:""})()}
+   <p class="muted sm"><b>Renta + impresión:</b> se suma la renta de cada equipo (su monto propio, la de equipo grande o chico, o la general); si ningún equipo tiene renta, se cobra una sola vez la renta fija o total del contrato. Más todas las páginas. <b>Renta con volumen:</b> solo la renta fija, más las páginas arriba de las incluidas (la renta de los equipos no se suma). <b>Solo impresión:</b> sin renta.</p></div>
   <div class="panel" style="margin-top:14px"><h2>Responsables</h2><div class="form">
    <label class="fl">Técnico asignado<select class="f" data-cb="tecnicoId" ${dis}><option value="">Sin técnico fijo</option>${tecnicos().map(u=>`<option value="${esc(u.id)}" ${p.tecnicoId===u.id?"selected":""}>${esc(u.alias)}</option>`).join("")}</select><span class="muted sm" style="font-weight:400">Se elige solo al crear tickets de este cliente.</span></label>
    <label class="fl">Vendedor (comisiones)<select class="f" data-cb="vendedorId" ${dis}><option value="">—</option>${vend.map(m=>`<option value="${esc(m.id)}" ${p.vendedorId===m.id?"selected":""}>${esc(m.nombre)}</option>`).join("")}</select></label>
@@ -1197,6 +1200,9 @@ function comCsv(mes){const rows=[["Mes","Vendedor","Cliente","Mes de contrato","
   Object.entries(comisionesMes(mes)).forEach(([pid,x])=>x.items.forEach(i=>rows.push([mes,nombreP(pid),i.c.nombre,i.idx,FEST[i.estado][0],i.base.toFixed(2),num(x.rg.pct),i.com.toFixed(2)])));descargarCsv(rows,"Comisiones_"+mes+".csv")}
 const AF={
  async saveCobro(id,L){const d={};L.querySelectorAll("[data-cb]").forEach(el=>d[el.dataset.cb]=el.type==="number"?(el.value===""?"":+el.value):el.value);
+  for(const tr of L.querySelectorAll("[data-req]")){const e=S.equipos.get(tr.dataset.req);if(!e)continue;const tam=tr.querySelector('[data-rk="tam"]').value,m=tr.querySelector('[data-rk="monto"]').value;
+   if(tam==="propia"&&m===""){toast("Escribe el monto propio de "+(e.modelo||"un equipo")+" o elige otra renta");return}
+   const ch={tamRenta:tam==="propia"?"":tam,renta:tam==="propia"?+m:""};if((e.tamRenta||"")!==ch.tamRenta||String(e.renta??"")!==String(ch.renta)){if(await upd("equipos/"+e._id,ch))Object.assign(e,ch)}}
   if(await upd("clientes/"+id,d,"Datos de cobro guardados")){Object.assign(S.clientes.get(id)||{},d)}},
  async facGuardar(id,L){const [cid,mes]=id.split("__");const c=S.clientes.get(cid);const ls=L._leer();
   const malo=ls.find(l=>(l.finBN!==""&&num(l.finBN)<num(l.iniBN))||(l.finColor&&num(l.finColor)<num(l.iniColor)));if(malo){toast("Hay un contador final menor que el inicial. Revísalo.");return}
