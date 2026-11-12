@@ -163,7 +163,7 @@ canvas.sig{width:100%;height:170px;background:#fff;border:1px dashed var(--muted
 <body>
 <div class="app" id="app">
   <aside>
-    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.17 · 12 nov</span></small></div></div>
+    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.18 · 12 nov</span></small></div></div>
     <nav id="nav"></nav>
     <div class="who" id="who">Conectando…</div>
   </aside>
@@ -760,6 +760,7 @@ function openEquipo(id){
    <label class="fl">Frecuencia de preventivo<select class="f" data-ef="frec" ${canW()?"":"disabled"}>${["mensual","bimestral","trimestral"].map(x=>`<option ${e.frec===x?"selected":""}>${x}</option>`).join("")}</select></label>
    <label class="fl">Último preventivo<input class="f" type="date" data-ef="ultPrev" value="${e.ultPrev?new Date(e.ultPrev).toISOString().slice(0,10):""}" ${canW()?"":"disabled"}></label>
    <label class="fl">Fecha de instalación<input class="f" type="date" data-ef="instalado" value="${esc(e.instalado||"")}" ${canW()?"":"disabled"}></label>
+   <label class="fl">Formato<select class="f" data-ef="formato" ${canW()?"":"disabled"}><option value="">Automático según modelo${formatoEq({...e,formato:""})?" ("+FMT_TXT[formatoEq({...e,formato:""})]+")":""}</option><option value="A3" ${e.formato==="A3"?"selected":""}>Doble carta (A3)</option><option value="A4" ${e.formato==="A4"?"selected":""}>Carta / oficio (A4)</option></select></label>
    <label class="fl">Renta propia del equipo (opcional)<input class="f" type="number" step="0.01" data-ef="renta" value="${esc(e.renta??"")}" placeholder="Si no, usa la del cliente" ${canW()?"":"disabled"}></label>
    <label class="fl full">Ubicación<input class="f" data-ef="ubicacion" value="${esc(e.ubicacion)}" ${canW()?"":"disabled"}></label>
    <label class="fl full">Notas<textarea class="f" data-ef="notas" ${canW()?"":"disabled"}>${esc(e.notas||"")}</textarea></label></div>
@@ -1091,7 +1092,19 @@ function cobroCli(c){const k=c.contrato||{};return{
 const eqsFac=cid=>[...S.equipos.values()].filter(e=>e.clienteId===cid&&["instalado","respaldo"].includes(e.estatus)).sort((a,b)=>(a.ubicacion||"").localeCompare(b.ubicacion||""));
 /* Cálculo por esquema. lineas: [{equipoId,iniBN,finBN,iniColor,finColor}] */
 /* Renta de un equipo: la suya propia, o la del tamaño elegido (grande / chico), o la renta por equipo general del cliente */
-const rentaDeEq=(e,p)=>e.renta!==undefined&&e.renta!==null&&e.renta!==""?num(e.renta):e.tamRenta==="grande"?num(p.rentaGrande):e.tamRenta==="chico"?num(p.rentaChico):num(p.rentaEquipo);
+/* Formato del equipo: el de su ficha o, si no, según el modelo. A3 = doble carta (grande) · A4 = carta/oficio (chico) */
+function formatoEq(e){if(e.formato==="A3"||e.formato==="A4")return e.formato;const m=String(e.modelo||"").toUpperCase().replace(/\s+/g," ");
+  if(/TAS\w*[LK]?FA|TASK|\bCS ?\d{3,4}/.test(m)||/MZ ?\d{4}/.test(m)||/ECOSYS ?M ?8\d{3}/.test(m))return "A3";
+  const b=m.match(/(?:BIZHUB|KONICA)\D*?C? ?(\d{3,4})/);if(b){const n=b[1];return n.length===4&&/^[34]/.test(n)?"A4":"A3"}
+  if(/ECOSYS|FS-|\bP ?\d{4}|\bM ?\d{4}|^MA?\d{4}/.test(m))return "A4";
+  if(/HP|LASER ?JET/.test(m))return /E ?[78]\d{4}|\b90[25]0\b|M ?8[0-9]{2}\b/.test(m)?"A3":"A4";
+  if(/SAMSUNG|\bSL/.test(m))return /SL ?- ?[XK]|SL[XK]/.test(m)?"A3":/SL ?- ?[MC]|SL[MC]/.test(m)?"A4":"";
+  return ""}
+const FMT_TXT={A3:"doble carta",A4:"carta/oficio"};
+/* Qué renta toca: «auto» usa el formato (doble carta → grande, carta/oficio → chico) si esa renta está capturada; si no, la general */
+function tamEfectivo(e,p){const t=e.tamRenta||"";if(t==="grande"||t==="chico"||t==="general")return t;const f=formatoEq(e);
+  if(f==="A3"&&p.rentaGrande!==""&&p.rentaGrande!==undefined)return "grande";if(f==="A4"&&p.rentaChico!==""&&p.rentaChico!==undefined)return "chico";return "general"}
+const rentaDeEq=(e,p)=>{if(e.renta!==undefined&&e.renta!==null&&e.renta!=="")return num(e.renta);const t=tamEfectivo(e,p);return t==="grande"?num(p.rentaGrande):t==="chico"?num(p.rentaChico):num(p.rentaEquipo)};
 function calcFac(c,lineas){const p=cobroCli(c);let bn=0,co=0;
   (lineas||[]).forEach(l=>{bn+=Math.max(0,num(l.finBN)-num(l.iniBN));co+=Math.max(0,num(l.finColor)-num(l.iniColor))});
   if(!p.esquema)return{sinEsquema:true,bn,co,cBN:0,cCo:0,renta:0,impBN:0,impCo:0,impresion:0,subtotal:0,iva:0,total:0,esquema:""};
@@ -1169,9 +1182,9 @@ function cobroTab(c,id){const p=cobroCli(c);const dis=canW()?"":"disabled";const
   const n=(k,l,step="0.01")=>`<label class="fl">${l}<input class="f" type="number" step="${step}" data-cb="${k}" value="${esc(p[k])}" ${dis}></label>`;
   return `<div class="panel"><h2>Cómo se le cobra</h2><div class="form">
    <label class="fl">Esquema<select class="f" data-cb="esquema" ${dis}><option value="">Sin esquema (elige uno)</option>${Object.entries(ESQUEMAS).map(([k,v])=>`<option value="${k}" ${p.esquema===k?"selected":""}>${v}</option>`).join("")}</select></label>
-   ${n("rentaFija","Renta fija o total del contrato (sin IVA)")}${n("rentaEquipo","Renta por equipo general (sin IVA)")}${n("rentaGrande","Renta por equipo grande (sin IVA)")}${n("rentaChico","Renta por equipo chico (sin IVA)")}${n("precioBN","Precio por página B/N")}${n("precioColor","Precio por página color")}${n("inclBN","Páginas B/N incluidas","1")}${n("inclColor","Páginas color incluidas","1")}</div>
-   ${(()=>{const E=eqsFac(id);return E.length?`<div class="muted sm b" style="margin:14px 0 6px">Renta de cada equipo</div><div class="wrap"><table class="tbl sm"><tr><th>Equipo</th><th>Ubicación</th><th>Renta que se le cobra</th><th>Monto propio</th></tr>${E.map(e=>{const pr=e.renta!==undefined&&e.renta!==null&&e.renta!=="";const v=pr?"propia":(e.tamRenta||"");return `<tr data-req="${esc(e._id)}"><td><b>${esc(e.modelo||"")}</b><div class="muted">${esc(e.serie||e._id)}</div></td><td>${esc(e.ubicacion||"")}</td><td><select class="f" data-rk="tam" ${dis}><option value="" ${v===""?"selected":""}>General</option><option value="grande" ${v==="grande"?"selected":""}>Equipo grande</option><option value="chico" ${v==="chico"?"selected":""}>Equipo chico</option><option value="propia" ${v==="propia"?"selected":""}>Monto propio</option></select></td><td><input class="f" type="number" step="0.01" data-rk="monto" value="${esc(pr?e.renta:"")}" placeholder="—" style="width:110px" ${dis}></td></tr>`}).join("")}</table></div>`:""})()}
-   <p class="muted sm"><b>Renta + impresión:</b> se suma la renta de cada equipo (su monto propio, la de equipo grande o chico, o la general); si ningún equipo tiene renta, se cobra una sola vez la renta fija o total del contrato. Más todas las páginas. <b>Renta con volumen:</b> solo la renta fija, más las páginas arriba de las incluidas (la renta de los equipos no se suma). <b>Solo impresión:</b> sin renta.</p></div>
+   ${n("rentaFija","Renta fija o total del contrato (sin IVA)")}${n("rentaEquipo","Renta por equipo general (sin IVA)")}${n("rentaGrande","Renta equipo doble carta / grande (sin IVA)")}${n("rentaChico","Renta equipo carta-oficio / chico (sin IVA)")}${n("precioBN","Precio por página B/N")}${n("precioColor","Precio por página color")}${n("inclBN","Páginas B/N incluidas","1")}${n("inclColor","Páginas color incluidas","1")}</div>
+   ${(()=>{const E=eqsFac(id);return E.length?`<div class="muted sm b" style="margin:14px 0 6px">Renta de cada equipo</div><div class="wrap"><table class="tbl sm"><tr><th>Equipo</th><th>Ubicación</th><th>Renta que se le cobra</th><th>Monto propio</th><th>Renta</th></tr>${E.map(e=>{const pr=e.renta!==undefined&&e.renta!==null&&e.renta!=="";const v=pr?"propia":(e.tamRenta||"");const f=formatoEq(e);const te=tamEfectivo(e,p);return `<tr data-req="${esc(e._id)}"><td><b>${esc(e.modelo||"")}</b><div class="muted">${esc(e.serie||e._id)}${f?" · "+FMT_TXT[f]:""}</div></td><td>${esc(e.ubicacion||"")}</td><td><select class="f" data-rk="tam" ${dis}><option value="" ${v===""?"selected":""}>Automático (${te==="grande"?"doble carta":te==="chico"?"carta/oficio":"general"})</option><option value="general" ${v==="general"?"selected":""}>General</option><option value="grande" ${v==="grande"?"selected":""}>Doble carta / grande</option><option value="chico" ${v==="chico"?"selected":""}>Carta-oficio / chico</option><option value="propia" ${v==="propia"?"selected":""}>Monto propio</option></select></td><td><input class="f" type="number" step="0.01" data-rk="monto" value="${esc(pr?e.renta:"")}" placeholder="—" style="width:110px" ${dis}></td><td class="b">${mxn(rentaDeEq(e,p))}</td></tr>`}).join("")}</table></div><p class="muted sm" style="margin:6px 0 0">«Automático» pone la renta de doble carta o de carta/oficio según el modelo (TASKalfa y la mayoría de bizhub = doble carta; ECOSYS = carta/oficio). Si un modelo sale mal, corrígelo en la ficha del equipo (Formato) o elige la renta a mano.</p>`:""})()}
+   <p class="muted sm"><b>Renta + impresión:</b> se suma la renta de cada equipo (su monto propio, la de doble carta o carta/oficio, o la general); si ningún equipo tiene renta, se cobra una sola vez la renta fija o total del contrato. Más todas las páginas. <b>Renta con volumen:</b> solo la renta fija, más las páginas arriba de las incluidas (la renta de los equipos no se suma). <b>Solo impresión:</b> sin renta.</p></div>
   <div class="panel" style="margin-top:14px"><h2>Responsables</h2><div class="form">
    <label class="fl">Técnico asignado<select class="f" data-cb="tecnicoId" ${dis}><option value="">Sin técnico fijo</option>${tecnicos().map(u=>`<option value="${esc(u.id)}" ${p.tecnicoId===u.id?"selected":""}>${esc(u.alias)}</option>`).join("")}</select><span class="muted sm" style="font-weight:400">Se elige solo al crear tickets de este cliente.</span></label>
    <label class="fl">Vendedor (comisiones)<select class="f" data-cb="vendedorId" ${dis}><option value="">—</option>${vend.map(m=>`<option value="${esc(m.id)}" ${p.vendedorId===m.id?"selected":""}>${esc(m.nombre)}</option>`).join("")}</select></label>
@@ -1203,7 +1216,7 @@ const AF={
   for(const tr of L.querySelectorAll("[data-req]")){const e=S.equipos.get(tr.dataset.req);if(!e)continue;const tam=tr.querySelector('[data-rk="tam"]').value,m=tr.querySelector('[data-rk="monto"]').value;
    if(tam==="propia"&&m===""){toast("Escribe el monto propio de "+(e.modelo||"un equipo")+" o elige otra renta");return}
    const ch={tamRenta:tam==="propia"?"":tam,renta:tam==="propia"?+m:""};if((e.tamRenta||"")!==ch.tamRenta||String(e.renta??"")!==String(ch.renta)){if(await upd("equipos/"+e._id,ch))Object.assign(e,ch)}}
-  if(await upd("clientes/"+id,d,"Datos de cobro guardados")){Object.assign(S.clientes.get(id)||{},d)}},
+  if(await upd("clientes/"+id,d,"Datos de cobro guardados")){Object.assign(S.clientes.get(id)||{},d);const sc=L.querySelector(".dr")?.scrollTop;openCliente(id,"cobro");const dr=document.querySelector("#layer .dr");if(dr&&sc)dr.scrollTop=sc}},
  async facGuardar(id,L){const [cid,mes]=id.split("__");const c=S.clientes.get(cid);const ls=L._leer();
   const malo=ls.find(l=>(l.finBN!==""&&num(l.finBN)<num(l.iniBN))||(l.finColor&&num(l.finColor)<num(l.iniColor)));if(malo){toast("Hay un contador final menor que el inicial. Revísalo.");return}
   if(ls.some(l=>l.finBN==="")&&ls.length){toast("Falta el contador final de algún equipo");return}
