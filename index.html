@@ -163,7 +163,7 @@ canvas.sig{width:100%;height:170px;background:#fff;border:1px dashed var(--muted
 <body>
 <div class="app" id="app">
   <aside>
-    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.22 · 12 nov</span></small></div></div>
+    <div class="brand"><div class="iso"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:#000;outline:1px solid #2A3E5C"></i></div><div><b>OA 360</b><small>Office Automation · <span title="Versión del sistema">v1.23 · 17 nov</span></small></div></div>
     <nav id="nav"></nav>
     <div class="who" id="who">Conectando…</div>
   </aside>
@@ -1615,6 +1615,11 @@ function vProspectos(){
    `<div class="tabs">${tabs.map(([k,n])=>`<button class="${PR.tab===k?"on":""}" data-ptab="${k}">${n}</button>`).join("")}</div>${body}`;
 }
 /* ---------- Hoy ---------- */
+/* ---------- campañas de correo (Instantly) ---------- */
+const CAMPANAS_P=["Correo nov-2026 · Tlalnepantla","Correo nov-2026 · Municipios vecinos"];
+const CEST={pendiente:["Pendiente de envío",""],enviado:["Recibió correo","blue"],respondio:["Respondió el correo","ok"],interesado:["Interesado por correo","ok"],rebotado:["Correo rebotado","warn"],baja:["Baja de correos","bad"]};
+function campChip(l,largo){if(!l.campana)return "";const e=CEST[l.campana_est]||["Campaña",""];
+  return `<div class="sm" style="margin-top:2px"><span class="chip ${e[1]}">${esc(e[0])}${l.campana_env&&l.campana_est!=="pendiente"?" el "+sdate(l.campana_env):""}</span>${largo?` <span class="muted">«${esc(l.campana)}»</span>`:""}${largo&&["enviado","respondio","interesado"].includes(l.campana_est)?`<div class="muted sm" style="margin-top:4px">Speech: «Le escribimos hace unos días sobre el diagnóstico gratuito de impresión…»</div>`:""}</div>`}
 function pHoy(){
   const yo=S.me.id,ver=["admin","direccion"].includes(S.rol),me=ver&&PR.hoyDe?PR.hoyDe:yo,otro=me!==yo,t=hoyP();const H=pload("hoy:"+me,()=>rpc("prosp_hoy",{p_persona:me}));
   if(H===undefined)return `<div class="panel empty">Cargando tu día…</div>`;if(!H)return `<div class="panel empty">No se pudo cargar. Recarga la página.</div>`;
@@ -1623,7 +1628,7 @@ function pHoy(){
   const libres=frio&&H.nnuevos<Math.max(falta,1)?pload("cola:"+PR.cola,()=>rpc("prosp_cola",{p_cola:PR.cola,p_tel:true,p_tomar:0})):null;
   const fila=(l,seg,hecho)=>`<div class="pitem"><div style="min-width:0"><div class="b click" data-pop="${esc(l.id)}">${esc(l.empresa)} ${l.prio?`<span class="prio">${esc(l.prio)} ${l.score||""}</span>`:""}</div>
     <div class="muted sm">${esc(l.seg||LISTAS_P[l.lista]||"")}${l.mun?" · "+esc(l.mun):""}${l.emp?" · "+esc(l.emp)+" empl.":""}</div>
-    <div class="sm mono">${esc(telP(l))}${telP(l)&&mailP(l)?" · ":""}${esc(mailP(l))}${!telP(l)&&!mailP(l)?`<span class="muted">sin datos de contacto</span>`:""}</div>
+    <div class="sm mono">${esc(telP(l))}${telP(l)&&mailP(l)?" · ":""}${esc(mailP(l))}${!telP(l)&&!mailP(l)?`<span class="muted">sin datos de contacto</span>`:""}</div>${campChip(l)}
     ${(seg||hecho)&&l.ult?`<div class="muted sm">Último: ${esc((CANP[l.ult.c]||[])[1]||"")} · ${esc(RESP_L[l.ult.r]||"")} · ${sdate(l.ult.d)}${seg&&l.prox?` · <span style="${l.prox<t?"color:var(--bad);font-weight:600":""}">seguimiento ${l.prox<t?"vencido ":""}${sdate(l.prox)}</span>`:""}</div>`:""}</div>
     <div class="row">${chipP(l.estado)}${hecho?"":`<button class="btn sm pri" data-pop="${esc(l.id)}" data-pfocus="1">Registrar</button>`}</div></div>`;
   const lista=(arr,vacio,f)=>arr.length?arr.map(l=>f(l)).join(""):`<div class="muted sm" style="padding:10px 2px">${vacio}</div>`;
@@ -1671,13 +1676,13 @@ function pEmpresas(){
   return `<div class="filters"><input class="f" data-pq placeholder="Buscar por nombre, correo, teléfono o colonia" value="${esc(f.q||"")}" style="flex:1;min-width:240px"></div>
   <div class="panel pfil">${sel("lista","Lista",[["","Todas"],...Object.entries(LISTAS_P)])}${sel("prio","Prioridad",[["","Todas"],["A","A"],["B","B"],["C","C"]])}${sel("ole","Oleada",[["","Todas"],["1","Oleada 1"],["2","Oleada 2"],["3","Oleada 3"]])}
    ${sel("estado","Estado",[["","Todos"],...ETAPAS_P,["vencido","Seguimiento vencido"]])}${sel("resp","Responsable",[["","Todos"],["_none","Sin asignar"],...ms.map(m=>[m.id,m.nombre])])}
-   ${sel("mun","Alcaldía / municipio",[["","Todos"],...muns.map(m=>[m,m])])}${sel("dato","Datos de contacto",[["","Cualquiera"],["email","Con correo"],["tel","Con teléfono"],["ambos","Con correo y teléfono"]])}
+   ${sel("mun","Alcaldía / municipio",[["","Todos"],...muns.map(m=>[m,m])])}${sel("dato","Datos de contacto",[["","Cualquiera"],["email","Con correo"],["tel","Con teléfono"],["ambos","Con correo y teléfono"]])}${sel("campana","Campaña de correo",[["","Todas"],["_alguna","Cualquier campaña"],...CAMPANAS_P.map(c=>[c,c])])}${sel("camp_est","Estado del correo",[["","Todos"],...Object.entries(CEST).map(([k,[n]])=>[k,n])])}
    ${sel("sort","Ordenar por",[["score","Puntuación"],["nombre","Nombre"],["ultimo","Último contacto"],["proximo","Próximo seguimiento"]])}</div>
   <div class="bulkp"><b>${R?fmt(tot):"…"}</b> empresas${PR.sel.size?` · <b>${PR.sel.size}</b> seleccionadas`:""}<span style="flex:1"></span>
    <select class="f" id="pb_who"><option value="">Asignar a…</option>${ms.map(m=>`<option value="${esc(m.id)}">${esc(m.nombre)}</option>`).join("")}<option value="_none">Quitar responsable</option></select>
    <button class="btn sm" data-pa="asignar">${PR.sel.size?"Asignar seleccionadas":"Asignar las "+fmt(Math.min(tot,5000))}</button><button class="btn sm" data-pa="campana">Registrar campaña de correo</button></div>
   ${R===undefined?`<div class="panel empty">Buscando…</div>`:!R?`<div class="panel empty">No se pudo cargar.</div>`:`<div class="panel wrap"><table class="tbl"><tr><th><input type="checkbox" data-pselall aria-label="Seleccionar página"></th><th>Empresa</th><th>Segmento</th><th>Municipio</th><th>Empl.</th><th>Prior.</th><th>Estado</th><th>Responsable</th><th>Último</th><th>Próximo</th></tr>
-   ${R.rows.map(l=>`<tr><td><input type="checkbox" data-psel="${esc(l.id)}" ${PR.sel.has(l.id)?"checked":""} aria-label="Seleccionar"></td><td class="b click" data-pop="${esc(l.id)}">${esc(l.empresa)}<div class="muted sm" style="font-weight:400">${esc(mailP(l)||telP(l)||"sin datos de contacto")}</div></td>
+   ${R.rows.map(l=>`<tr><td><input type="checkbox" data-psel="${esc(l.id)}" ${PR.sel.has(l.id)?"checked":""} aria-label="Seleccionar"></td><td class="b click" data-pop="${esc(l.id)}">${esc(l.empresa)}<div class="muted sm" style="font-weight:400">${esc(mailP(l)||telP(l)||"sin datos de contacto")}</div>${campChip(l)}</td>
     <td class="sm">${esc(l.seg||LISTAS_P[l.lista]||"")}</td><td class="sm">${esc(l.mun)}</td><td class="sm" style="white-space:nowrap">${esc(l.emp)}</td><td>${l.prio?`<span class="prio">${esc(l.prio)} ${l.score}</span>`:""}${l.ole?` <span class="muted sm">O${l.ole}</span>`:""}</td>
     <td>${chipP(l.estado)}</td><td class="sm">${esc(nombreP(l.resp))}</td><td class="sm" style="white-space:nowrap">${l.ult?cdot(l.ult.c)+" "+sdate(l.ult.d):""}</td><td class="sm" style="white-space:nowrap;${l.prox&&l.prox<hoyP()&&!TERMP.has(l.estado)?"color:var(--bad);font-weight:600":""}">${sdate(l.prox)}</td></tr>`).join("")||`<tr><td colspan="10" class="empty">Ninguna empresa coincide con estos filtros.</td></tr>`}</table>
    <div class="row" style="justify-content:flex-end;margin-top:10px"><span class="muted sm">Página ${PR.page+1} de ${fmt(pages)}</span><button class="btn sm" data-ppg="-1" ${PR.page?"":"disabled"}>Anterior</button><button class="btn sm" data-ppg="1" ${PR.page<pages-1?"":"disabled"}>Siguiente</button></div></div>`}`;
@@ -1764,7 +1769,7 @@ function fichaP(focus){
   const l=PR.ficha,es=l.estado,x=l.contacto||{},tel=telP(l),mail=mailP(l),est=PD.est||(PD.r?sugEst(es,PD.r):es);
   const dir=[l.calle,l.colonia,l.cp&&("CP "+l.cp),l.mun,l.ent].filter(Boolean).join(", ");
   drawer(`<button class="btn sm x" data-close>Cerrar</button><div class="muted sm">${esc(LISTAS_P[l.lista]||"")}${l.ole?" · Oleada "+l.ole:""}</div><h2>${esc(l.empresa)}</h2>${l.razon?`<div class="muted">${esc(l.razon)}</div>`:""}
-   <div class="row" style="margin:6px 0 12px">${chipP(es)}${l.prio?`<span class="prio">Prioridad ${esc(l.prio)} · ${l.score}</span>`:""}</div>
+   <div class="row" style="margin:6px 0 12px">${chipP(es)}${l.prio?`<span class="prio">Prioridad ${esc(l.prio)} · ${l.score}</span>`:""}</div>${l.campana?`<div style="margin:-4px 0 12px">${campChip(l,true)}</div>`:""}
    <div class="panel"><div class="form" style="grid-template-columns:repeat(3,1fr)"><label class="fl">Estado<select class="f" data-pfx="estado">${ETAPAS_P.map(([k,n])=>`<option value="${k}" ${k===es?"selected":""}>${n}</option>`).join("")}</select></label>
     <label class="fl">Responsable<select class="f" data-pfx="resp"><option value="">Sin asignar</option>${personasP().map(m=>`<option value="${esc(m.id)}" ${m.id===l.resp?"selected":""}>${esc(m.nombre)}</option>`).join("")}</select></label>
     <label class="fl">Próximo seguimiento<input class="f" type="date" data-pfx="prox" value="${esc(l.prox||"")}"></label></div>
@@ -1840,6 +1845,10 @@ Object.assign(A,{
  addRutina(){const r=[...rutinasDraft(),{id:uid(),persona:S.me.id,texto:"Nueva rutina",dias:[1,2,3,4,5]}];save("config/crm",{...crmCfg(),rutinas:r},"Rutina añadida")},
  guardarRutinas(){save("config/crm",{...crmCfg(),rutinas:rutinasDraft().filter(r=>r.texto.trim())},"Rutinas guardadas")},
  async importar(){const f=$("#pimp")?.files?.[0],m=$("#pimp_m");if(!f){toast("Elige el archivo");return}let d;try{d=JSON.parse(await f.text())}catch(e){toast("El archivo no es válido");return}
+  if(d.tipo==="oa360-campana"&&Array.isArray(d.rows)){const t={actualizadas:0,contactadas:0,bajas:0,no_encontradas:0};const B=300;
+   for(let i=0;i<d.rows.length;i+=B){m.textContent=`Marcando campañas… ${fmt(Math.min(i+B,d.rows.length))} de ${fmt(d.rows.length)}`;
+    try{const r=await rpc("prosp_campana_sync",{p_rows:d.rows.slice(i,i+B),p_resp:d.resp||""});Object.keys(t).forEach(k=>t[k]+=r[k]||0)}catch(e){m.textContent="Se detuvo en la fila "+fmt(i)+". Vuelve a intentarlo: lo ya marcado no se duplica.";return}}
+   m.textContent=`Listo: ${fmt(t.actualizadas)} empresas marcadas con su campaña; ${fmt(t.contactadas)} pasaron a «Contactado» con seguimiento para ${nombreP(d.resp)}${t.bajas?`; ${fmt(t.bajas)} bajas`:""}${t.no_encontradas?`; ${fmt(t.no_encontradas)} no encontradas`:""}.`;pflush();toast("Campañas marcadas");return}
   if(d.tipo==="oa360-fusion"&&Array.isArray(d.rows)){let nv=0,cp=0;const B=300;
    for(let i=0;i<d.rows.length;i+=B){m.textContent=`Importando ${d.origen||"la base"}… ${fmt(Math.min(i+B,d.rows.length))} de ${fmt(d.rows.length)}`;
     try{const r=await rpc("prosp_fusionar",{p_rows:d.rows.slice(i,i+B)});nv+=r.nuevas||0;cp+=r.completadas||0}catch(e){m.textContent="Se detuvo en la fila "+fmt(i)+". Vuelve a intentarlo: lo ya importado no se duplica.";return}}
